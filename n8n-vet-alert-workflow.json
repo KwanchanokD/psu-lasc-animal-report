@@ -1,0 +1,157 @@
+{
+  "name": "PSU-LASC — แจ้งทีมสัตวแพทย์ (LINE + อีเมล)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lasc-vet-alert",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000001",
+      "name": "รับเหตุการณ์จากระบบรายงานฯ",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        300
+      ],
+      "webhookId": "b2000000-0000-4000-8000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* =====================================================================\n   PSU-LASC — แจ้งทีมสัตวแพทย์ทาง LINE + อีเมล\n   รับเหตุการณ์จากระบบรายงานฯ (มีแค่เลขอ้างอิง) → อ่านข้อมูลจริงจาก Firebase → ส่ง LINE ทันที\n   และส่งรายการอีเมลต่อให้โหนด \"ส่งอีเมล\" (SMTP)\n\n   Environment variables บนเซิร์ฟเวอร์ n8n\n     LASC_FB_DB_URL     https://<project>-default-rtdb.<region>.firebasedatabase.app\n     LASC_FB_DB_SECRET  Database secret (Project settings → Service accounts → Database secrets)\n     LASC_FB_ROOT       animalReport (โปรเจกต์แยก) หรือ data/animalReport (โปรเจกต์ใช้ร่วม)\n     LASC_ALERT_KEY     รหัสเชื่อมต่อ ต้องตรงกับช่อง「รหัสเชื่อมต่อ」ในระบบ\n     LASC_LINE_TOKEN    Channel access token (long-lived) ของ LINE Messaging API\n     LASC_APP_URL       ที่อยู่ระบบรายงานฯ เช่น https://lasc.psu.ac.th/animal-report/\n   ===================================================================== */\nconst ENV = {\n  db:     String($env.LASC_FB_DB_URL || '').replace(/\\/+$/, ''),\n  secret: String($env.LASC_FB_DB_SECRET || ''),\n  root:   String($env.LASC_FB_ROOT || 'animalReport').replace(/^\\/+|\\/+$/g, ''),\n  key:    String($env.LASC_ALERT_KEY || ''),\n  line:   String($env.LASC_LINE_TOKEN || ''),\n  app:    String($env.LASC_APP_URL || '')\n};\nconst MAX_GUEST_PER_10MIN = 10;          /* กันการแจ้งซ้ำ ๆ จากผู้แจ้งทั่วไป */\nconst MAX_AGE_MIN = 30;                  /* แจ้งเตือนเฉพาะเรื่องที่เพิ่งบันทึก */\n\nconst errors = [];\nconst emails = [];\nlet lineSent = 0;\n\nfunction finish(ok, extra) {\n  const summary = Object.assign({ ok: ok, line: lineSent, email: emails.length, error: '', skipped: '' }, extra || {});\n  if (errors.length && !summary.error) summary.error = errors.join(' · ');\n  if (!emails.length) return [{ json: Object.assign({ to: '' }, summary) }];\n  return emails.map(m => ({ json: Object.assign({}, summary, m) }));\n}\n\n/* ---------- อ่านคำขอ ---------- */\nconst body = $input.first().json.body || {};\nlet p = body.payload;\nif (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = null; } }\nif (!p && body && typeof body === 'object' && body.event) p = body;\nif (!p || typeof p !== 'object') return finish(false, { error: 'bad payload' });\nif (!ENV.db || !ENV.secret || !ENV.key) return finish(false, { error: 'n8n ยังตั้งค่า LASC_FB_DB_URL / LASC_FB_DB_SECRET / LASC_ALERT_KEY ไม่ครบ' });\nif (p.key !== ENV.key) return finish(false, { error: 'รหัสเชื่อมต่อไม่ถูกต้อง' });\n\nconst ID = /^[A-Za-z0-9_-]{1,64}$/;\nconst event = String(p.event || '');\nif (!/^(alert|status|test|register|member)$/.test(event)) return finish(false, { error: 'unknown event' });\n\n/* ---------- Firebase REST ---------- */\nconst http = (opts) => this.helpers.httpRequest(Object.assign({ json: true, timeout: 15000 }, opts));\nconst fbUrl = (path) => `${ENV.db}/${ENV.root}/${path}.json?auth=${encodeURIComponent(ENV.secret)}`;\nconst fbGet = (path) => http({ method: 'GET', url: fbUrl(path) });\nconst fbPut = (path, v) => http({ method: 'PUT', url: fbUrl(path), body: v });\nconst logKey = (s) => String(s).replace(/[.#$\\[\\]\\/]/g, '_');\nasync function once(key) {                /* true = ยังไม่เคยส่ง → จองไว้เลย */\n  const k = logKey(key);\n  const hit = await fbGet('notifyLog/' + k);\n  if (hit) return false;\n  await fbPut('notifyLog/' + k, { at: new Date().toISOString() });\n  return true;\n}\n\n/* ---------- ข้อความ ---------- */\nconst TYPE = { emergency: '🚨 เหตุฉุกเฉิน', health: '🩺 ปัญหาสุขภาพสัตว์ทดลอง' };\nconst URG = { critical: '🔴 วิกฤต', urgent: '🟠 เร่งด่วน', routine: '🔵 ทั่วไป' };\nconst STAT = { new: '🆕 รอรับเรื่อง', ack: '📥 รับเรื่องแล้ว', treating: '💉 กำลังดูแลรักษา', closed: '✅ ปิดเรื่องแล้ว' };\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst list = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);\nconst link = ENV.app ? ENV.app.replace(/\\/?$/, '/') + 'index.html?tab=alert' : '';\nfunction rows(a) {\n  return [\n    ['เลขที่', a.docNo], ['ประเภท', TYPE[a.type]], ['ความเร่งด่วน', URG[a.urgency]],\n    ['ลักษณะเหตุ', a.category], ['โครงการ', a.projectNo ? a.projectNo + ' ' + (a.projectName || '') : ''],\n    ['สถานที่', a.location], ['กรง / รหัสสัตว์', a.cage],\n    ['สัตว์', [a.species, a.sex, a.strain].filter(Boolean).join(' · ') + (a.qty ? ` — ${a.qty} ตัว` : '')],\n    ['อาการ', list(a.signs).join(', ')],\n    ['เริ่มพบ', [a.onsetDate, a.onsetTime].filter(Boolean).join(' ')],\n    ['รายละเอียด', a.detail], ['ทำไปแล้ว', a.firstAid], ['ต้องการ', a.request],\n    ['ผู้แจ้ง', `${a.reporter || ''} โทร ${a.phone || '-'}${a.email ? ' · ' + a.email : ''}`]\n  ].filter(r => r[1]);\n}\nfunction htmlTable(rs) {\n  return '<table style=\"border-collapse:collapse;max-width:720px;font-family:Sarabun,Tahoma,sans-serif;font-size:14px\">' +\n    rs.map(([k, v]) => `<tr><th style=\"text-align:left;background:#f2f6fa;padding:6px 10px;border:1px solid #ccd;width:30%\">${esc(k)}</th>` +\n      `<td style=\"padding:6px 10px;border:1px solid #ccd\">${esc(v).replace(/\\n/g, '<br>')}</td></tr>`).join('') + '</table>';\n}\nfunction wrap(lead, inner) {\n  return `<div style=\"font-family:Sarabun,Tahoma,sans-serif;font-size:14px;color:#111\"><p>${lead}</p>${inner || ''}` +\n    (link ? `<p>เปิดระบบ: <a href=\"${esc(link)}\">${esc(link)}</a></p>` : '') +\n    '<p style=\"color:#777;font-size:12px\">ส่งอัตโนมัติจากระบบรายงานการปฏิบัติต่อสัตว์ทดลอง PSU:LASC</p></div>';\n}\nasync function pushLine(to, text) {\n  if (!ENV.line || !to) return;\n  try {\n    await http({\n      method: 'POST', url: 'https://api.line.me/v2/bot/message/push',\n      headers: { Authorization: 'Bearer ' + ENV.line },\n      body: { to: to, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }\n    });\n    lineSent++;\n  } catch (e) {\n    errors.push('LINE ' + String(to).slice(0, 6) + '…: ' + ((e.response && e.response.body && e.response.body.message) || e.message || e));\n  }\n}\nfunction mail(to, subject, html) {\n  if (to && /@/.test(to)) emails.push({ to: String(to), subject: String(subject).slice(0, 240), html: html });\n}\nasync function activeVets(filter) {\n  const all = list(await fbGet('vets')).filter(v => v && v.active !== false);\n  return all.filter(filter || (() => true));\n}\n\n/* ---------- เหตุการณ์ ---------- */\nif (event === 'alert' || event === 'status') {\n  const id = String(p.id || '');\n  const guest = p.guest === true || p.guest === 'true';\n  const uid = String(p.uid || '');\n  if (!ID.test(id) || (!guest && !ID.test(uid))) return finish(false, { error: 'bad id' });\n  const a = await fbGet(guest ? `guestAlerts/${id}` : `alerts/${uid}/${id}`);\n  if (!a || a.id !== id) return finish(false, { error: 'ไม่พบเรื่องนี้ในฐานข้อมูล' });\n\n  if (event === 'alert') {\n    const age = (Date.now() - Date.parse(a.createdAt || 0)) / 60000;\n    if (!(age >= -5 && age <= MAX_AGE_MIN)) return finish(true, { skipped: 'เรื่องเก่าเกิน ' + MAX_AGE_MIN + ' นาที' });\n    if (guest) {\n      const bucket = new Date(); bucket.setMinutes(Math.floor(bucket.getMinutes() / 10) * 10, 0, 0);\n      const rk = 'guestRate/' + bucket.toISOString().slice(0, 16).replace(/[-:T]/g, '');\n      const n = Number(((await fbGet('notifyLog/' + rk)) || {}).n || 0);\n      if (n >= MAX_GUEST_PER_10MIN) return finish(true, { skipped: 'มีการแจ้งจากผู้แจ้งทั่วไปมากเกินไป — โปรดตรวจกล่องรับแจ้งในระบบ' });\n      await fbPut('notifyLog/' + rk, { n: n + 1 });\n    }\n    if (!(await once('alert_' + id))) return finish(true, { skipped: 'แจ้งเรื่องนี้ไปแล้ว' });\n    const level = ['critical', 'urgent', 'routine'].includes(a.urgency) ? a.urgency : 'critical';\n    const vets = await activeVets(v => v[level] !== false);\n    if (!vets.length) return finish(true, { skipped: 'ยังไม่มีสัตวแพทย์ในรายชื่อผู้รับแจ้ง' });\n    const rs = rows(a);\n    const text = `${URG[a.urgency] || ''} แจ้ง${(TYPE[a.type] || '').replace(/^\\S+\\s/, '')}\\n` +\n      rs.map(([k, v]) => `${k}: ${v}`).join('\\n') +\n      (guest ? '\\n(ผู้แจ้งทั่วไป — ยังไม่ได้เป็นสมาชิกที่อนุมัติ)' : '') + (link ? `\\n\\nรับเรื่อง: ${link}` : '');\n    const subject = `[LASC ${URG[a.urgency] || ''}] แจ้ง${(TYPE[a.type] || '').replace(/^\\S+\\s/, '')} — ${a.category || list(a.signs).slice(0, 2).join(', ') || a.species || ''} (${a.docNo})`;\n    const html = wrap(`เรียน ทีมสัตวแพทย์ศูนย์สัตว์ทดลอง<br>มีการแจ้ง<b>${esc(TYPE[a.type] || '')}</b> ระดับ <b>${esc(URG[a.urgency] || '')}</b>` +\n      (guest ? ' <i>(ผู้แจ้งทั่วไป)</i>' : ''), htmlTable(rs));\n    for (const v of vets) { await pushLine(v.lineId, text); mail(v.email, subject, html); }\n    return finish(true);\n  }\n\n  /* status: แจ้งความคืบหน้าในทีมทาง LINE + แจ้งผลถึงผู้แจ้งทางอีเมล */\n  const h = list(a.history);\n  if (!(await once(`status_${id}_${h.length}`))) return finish(true, { skipped: 'แจ้งความคืบหน้านี้ไปแล้ว' });\n  const st = STAT[a.status] || a.status;\n  const last = h[h.length - 1] || {};\n  const vets = await activeVets(v => !!v.lineId);\n  const t = `${st} — ${a.docNo}\\n${a.species || ''} ${a.qty || ''} ตัว · ${a.location || ''}` +\n    (a.vetName ? `\\nผู้รับผิดชอบ: ${a.vetName}` : '') + (a.outcome && a.status === 'closed' ? `\\nผล: ${a.outcome}` : '') +\n    (last.note ? `\\nบันทึก: ${last.note}` : '');\n  for (const v of vets) await pushLine(v.lineId, t);\n  if ((p.mail === true || p.mail === 'true') && a.email) {\n    const lead = `เรียน ${esc(a.reporter || '')}<br>ทีมสัตวแพทย์ได้อัปเดตเรื่องที่ท่านแจ้ง (${esc(a.docNo)}) เป็น <b>${esc(st)}</b>` +\n      (a.vetName ? ` — ผู้รับผิดชอบ: ${esc(a.vetName)}` : '') +\n      (a.outcome && a.status === 'closed' ? `<br>ผลการดูแล: <b>${esc(a.outcome)}</b>` : '') +\n      (a.vetNote ? `<br>บันทึก / คำแนะนำ: ${esc(a.vetNote).replace(/\\n/g, '<br>')}` : '') +\n      (/Euthanasia|Died/.test(a.outcome || '') && a.status === 'closed' ? '<br><b>กรุณาบันทึกรายงานการปฏิบัติต่อสัตว์ทดลองในระบบด้วย</b>' : '');\n    mail(a.email, `[LASC] อัปเดตเรื่องที่แจ้ง ${a.docNo} — ${st.replace(/^\\S+\\s/, '')}`, wrap(lead, htmlTable(rows(a))));\n  }\n  return finish(true);\n}\n\nif (event === 'test') {\n  const minute = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');\n  const vid = String(p.vetId || '');\n  if (vid && !ID.test(vid)) return finish(false, { error: 'bad vetId' });\n  if (!(await once(`test_${vid || 'all'}_${minute}`))) return finish(true, { skipped: 'ทดสอบไปแล้วในนาทีนี้ — รอสักครู่แล้วลองใหม่' });\n  const vets = vid ? [await fbGet('vets/' + vid)].filter(Boolean) : await activeVets();\n  if (!vets.length) return finish(true, { skipped: 'ไม่พบผู้รับแจ้ง' });\n  for (const v of vets) {\n    await pushLine(v.lineId, `🔔 ทดสอบการแจ้งเตือน PSU:LASC\\nถึง: ${v.name || ''}\\nช่องทางนี้พร้อมรับแจ้งเหตุฉุกเฉิน/ปัญหาสุขภาพสัตว์แล้ว`);\n    mail(v.email, '[ทดสอบ] การแจ้งเตือนทีมสัตวแพทย์ PSU:LASC', wrap(`เรียน ${esc(v.name || '')}<br>ช่องทางอีเมลนี้พร้อมรับแจ้งเหตุฉุกเฉิน/ปัญหาสุขภาพสัตว์ทดลองแล้ว`));\n  }\n  return finish(true);\n}\n\nif (event === 'register') {\n  const uid = String(p.uid || '');\n  if (!ID.test(uid)) return finish(false, { error: 'bad uid' });\n  const u = await fbGet('users/' + uid);\n  if (!u) return finish(false, { error: 'ไม่พบข้อมูลลงทะเบียน' });\n  if (await fbGet('members/' + uid)) return finish(true, { skipped: 'พิจารณาแล้ว' });\n  if (!(await once('register_' + uid))) return finish(true, { skipped: 'แจ้งไปแล้ว' });\n  const vets = await activeVets(v => v.notifyMembers === true);\n  const text = `👥 มีนักวิจัยลงทะเบียนใหม่ รออนุมัติ\\n${u.name || ''} · ${u.email || ''}\\n${u.org || ''} ${u.phone || ''}` +\n    (ENV.app ? `\\n\\nอนุมัติ: ${ENV.app.replace(/\\/?$/, '/')}index.html?tab=members` : '');\n  for (const v of vets) {\n    await pushLine(v.lineId, text);\n    mail(v.email, `[LASC] นักวิจัยลงทะเบียนใหม่ — ${u.name || u.email || ''}`, wrap(esc(text).replace(/\\n/g, '<br>')));\n  }\n  return finish(true);\n}\n\nif (event === 'member') {\n  const uid = String(p.uid || '');\n  if (!ID.test(uid)) return finish(false, { error: 'bad uid' });\n  const [u, m] = [await fbGet('users/' + uid), await fbGet('members/' + uid)];\n  if (!u || !m || !m.status) return finish(false, { error: 'ไม่พบข้อมูล' });\n  if (!(await once(`member_${uid}_${m.status}_${m.at || ''}`))) return finish(true, { skipped: 'แจ้งไปแล้ว' });\n  const T = {\n    approved: ['บัญชีของท่านได้รับอนุมัติแล้ว', 'ท่านเข้าสู่ระบบรายงานการปฏิบัติต่อสัตว์ทดลองได้ทันที รายงานที่บันทึกไว้ในเครื่องจะส่งขึ้นระบบกลางให้อัตโนมัติ'],\n    rejected: ['บัญชีของท่านไม่ได้รับอนุมัติ', 'หากมีข้อสงสัย กรุณาติดต่อเจ้าหน้าที่ศูนย์สัตว์ทดลอง'],\n    suspended: ['บัญชีของท่านถูกระงับการใช้งาน', 'กรุณาติดต่อเจ้าหน้าที่ศูนย์สัตว์ทดลอง']\n  }[m.status];\n  if (!T) return finish(true, { skipped: 'สถานะไม่ต้องแจ้ง' });\n  mail(u.email, `[LASC] ${T[0]}`, wrap(`เรียน ${esc(u.name || '')}<br><b>${T[0]}</b><br>${T[1]}`));\n  return finish(true);\n}\n\nreturn finish(false, { error: 'unhandled' });\n"
+      },
+      "id": "b2000000-0000-4000-8000-000000000002",
+      "name": "ตรวจสอบ ดึงข้อมูล และส่ง LINE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: $json.ok, line: $json.line, email: $json.email, error: $json.error, skipped: $json.skipped }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "={{ $env.LASC_APP_ORIGIN || '*' }}"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000003",
+      "name": "ตอบกลับระบบรายงานฯ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.to }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000004",
+      "name": "มีอีเมลต้องส่งหรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.LASC_MAIL_FROM }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000005",
+      "name": "ส่งอีเมล (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        700,
+        220
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "รับเหตุการณ์จากระบบรายงานฯ": {
+      "main": [
+        [
+          {
+            "node": "ตรวจสอบ ดึงข้อมูล และส่ง LINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจสอบ ดึงข้อมูล และส่ง LINE": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับระบบรายงานฯ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตอบกลับระบบรายงานฯ": {
+      "main": [
+        [
+          {
+            "node": "มีอีเมลต้องส่งหรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีอีเมลต้องส่งหรือไม่": {
+      "main": [
+        [
+          {
+            "node": "ส่งอีเมล (SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "psu-lasc-animal-report"
+  },
+  "tags": []
+}

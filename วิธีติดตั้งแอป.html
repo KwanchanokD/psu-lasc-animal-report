@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>วิธีติดตั้งแอป — ระบบรายงานการปฏิบัติต่อสัตว์ทดลอง PSU:LASC</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --primary:#1a5c9e; --primary-dark:#124a82; --primary-light:#e8f1fa; --accent:#0e7c66;
+          --warning:#b9770e; --warning-light:#fdf3e2; --danger:#c0392b; --danger-light:#fdecea;
+          --ok:#1f8a4c; --ok-light:#e8f6ee; --border:#dfe6ee; --text:#2c3e50; --muted:#7f8c8d; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Sarabun','Leelawadee UI',Tahoma,sans-serif; background:#f4f6f9; color:var(--text);
+         font-size:15.5px; line-height:1.75; }
+  header { background:linear-gradient(135deg,var(--primary-dark),var(--primary)); color:#fff;
+           padding:26px 22px; text-align:center; border-bottom:3px solid var(--accent); }
+  header img { width:74px; height:74px; object-fit:contain; background:#fff; border-radius:50%; padding:6px; }
+  header h1 { font-size:21px; font-weight:600; margin-top:10px; }
+  header p { font-size:13.5px; opacity:.9; }
+  .wrap { max-width:880px; margin:0 auto; padding:22px 16px 60px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:11px; margin-bottom:18px; overflow:hidden; }
+  .card h2 { background:var(--primary-light); color:var(--primary-dark); font-size:16px; font-weight:600;
+             padding:12px 18px; border-bottom:1px solid var(--border); }
+  .card .body { padding:16px 20px; }
+  h3 { font-size:15px; color:var(--primary-dark); margin:16px 0 6px; border-left:4px solid var(--primary); padding-left:9px; }
+  h3:first-child { margin-top:0; }
+  ol, ul { margin:6px 0 6px 22px; }
+  li { margin-bottom:5px; }
+  .note { border-left:4px solid; border-radius:8px; padding:11px 14px; margin:12px 0; font-size:14.5px; }
+  .note.info { background:var(--primary-light); border-color:var(--primary); }
+  .note.warn { background:var(--warning-light); border-color:var(--warning); }
+  .note.ok   { background:var(--ok-light);      border-color:var(--ok); }
+  .note.bad  { background:var(--danger-light);  border-color:var(--danger); }
+  table { width:100%; border-collapse:collapse; font-size:14.2px; margin:10px 0; }
+  th, td { border:1px solid var(--border); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#f7f9fc; color:var(--primary-dark); font-weight:600; }
+  code { background:#eef2f6; padding:1px 6px; border-radius:5px; font-size:13.5px; }
+  .file { font-family:Consolas,monospace; background:#eef2f6; padding:1px 7px; border-radius:5px; font-size:13.5px; }
+  .steps { counter-reset:s; list-style:none; margin-left:0; }
+  .steps li { counter-increment:s; position:relative; padding-left:34px; margin-bottom:11px; }
+  .steps li::before { content:counter(s); position:absolute; left:0; top:2px; width:24px; height:24px;
+    background:var(--primary); color:#fff; border-radius:50%; text-align:center; line-height:24px;
+    font-size:13px; font-weight:600; }
+  .pill { display:inline-block; padding:1px 10px; border-radius:999px; font-size:12.5px; font-weight:600; }
+  .pill.ok { background:var(--ok-light); color:var(--ok); }
+  .pill.warn { background:var(--warning-light); color:var(--warning); }
+  footer { text-align:center; font-size:13px; color:var(--muted); padding:10px 16px 34px; }
+  a { color:var(--primary); }
+  @media print { header { background:#fff; color:#000; } body { background:#fff; } }
+</style>
+</head>
+<body>
+<header>
+  <img src="icon-192.png" alt="LASC">
+  <h1>วิธีติดตั้งเป็นแอป — ระบบรายงานการปฏิบัติต่อสัตว์ทดลองของนักวิจัย</h1>
+  <p>ติดตั้งลงคอมพิวเตอร์และมือถือได้เหมือนแอปทั่วไป · ศูนย์สัตว์ทดลอง ม.อ. (PSU:LASC)</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>ระบบนี้เป็นแอปแบบไหน</h2>
+    <div class="body">
+      <p>เป็น <b>PWA (Progressive Web App)</b> — ติดตั้งลงเครื่องได้เหมือนแอปทั่วไป มีไอคอนของตัวเอง
+        เปิดเป็นหน้าต่างแยกไม่มีแถบเบราว์เซอร์ ใช้งานออฟไลน์ได้ และอัปเดตอัตโนมัติเมื่อออนไลน์</p>
+      <table>
+        <thead><tr><th style="width:30%">วิธีติดตั้ง</th><th>เหมาะกับ</th><th style="width:22%">เข้าสู่ระบบ/ซิงก์คลาวด์</th></tr></thead>
+        <tbody>
+          <tr><td><b>ก. ติดตั้งจากเว็บ (PWA)</b></td><td>ทุกเครื่อง ทั้งคอมพิวเตอร์ มือถือ แท็บเล็ต — <b>แนะนำ</b></td>
+              <td><span class="pill ok">ได้</span></td></tr>
+          <tr><td><b>ข. เปิดจากไฟล์ในเครื่อง</b></td><td>คอมพิวเตอร์ที่ยังไม่ได้เผยแพร่ระบบขึ้นเว็บ</td>
+              <td><span class="pill warn">ไม่ได้</span> (เก็บข้อมูลในเครื่อง)</td></tr>
+        </tbody>
+      </table>
+      <div class="note warn"><b>ข้อจำกัดของเบราว์เซอร์</b> — การเข้าสู่ระบบและซิงก์ข้อมูลกับศูนย์สัตว์ทดลอง
+        ทำได้เฉพาะเมื่อเปิดผ่าน <code>https://</code> เท่านั้น ถ้าเปิดจากไฟล์ (<code>file://</code>)
+        ระบบจะทำงานแบบเก็บข้อมูลในเครื่องและแจ้งเตือนให้ทราบ</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ก. ติดตั้งจากเว็บ (แนะนำ)</h2>
+    <div class="body">
+      <h3>ขั้นที่ 1 — นำระบบขึ้นโฮสต์ (เจ้าหน้าที่ทำครั้งเดียว)</h3>
+      <p>อัปโหลด <b>ทุกไฟล์ในโฟลเดอร์นี้</b> ขึ้นที่ใดที่หนึ่งที่เปิดผ่าน <code>https://</code> ได้
+        เช่น GitHub Pages (แบบเดียวกับระบบอื่นของศูนย์ฯ) หรือเว็บเซิร์ฟเวอร์ของหน่วยงาน</p>
+      <table>
+        <thead><tr><th style="width:34%">ไฟล์</th><th>จำเป็นไหม</th></tr></thead>
+        <tbody>
+          <tr><td><span class="file">index.html</span></td><td>จำเป็น — ตัวระบบ</td></tr>
+          <tr><td><span class="file">manifest.webmanifest</span></td><td>จำเป็น — ทำให้ติดตั้งเป็นแอปได้</td></tr>
+          <tr><td><span class="file">sw.js</span></td><td>จำเป็น — ใช้งานออฟไลน์ + อัปเดตอัตโนมัติ</td></tr>
+          <tr><td><span class="file">icon-192.png</span> <span class="file">icon-512.png</span></td><td>จำเป็น — ไอคอนแอป</td></tr>
+          <tr><td><span class="file">screenshot-wide.png</span> <span class="file">screenshot-narrow.png</span></td><td>แนะนำ — รูปตัวอย่างในหน้าต่างติดตั้ง</td></tr>
+          <tr><td><span class="file">วิธีใช้งาน.html</span> <span class="file">วิธีติดตั้งแอป.html</span></td><td>แนะนำ — คู่มือ</td></tr>
+          <tr><td>ไฟล์ <span class="file">.md</span> <span class="file">.cmd</span> <span class="file">.ps1</span> <span class="file">firebase-rules.json</span></td>
+              <td>ไม่จำเป็นต้องอัปโหลด — เป็นเอกสารและเครื่องมือสำหรับเจ้าหน้าที่</td></tr>
+        </tbody>
+      </table>
+
+      <h3>ขั้นที่ 2 — ติดตั้งลงเครื่อง</h3>
+      <table>
+        <thead><tr><th style="width:26%">อุปกรณ์</th><th>วิธีทำ</th></tr></thead>
+        <tbody>
+          <tr><td><b>🖥 Windows / macOS<br>(Chrome, Edge)</b></td>
+              <td>เปิด URL ของระบบ → กดปุ่ม <b>「⬇ ติดตั้งแอป」</b> ที่มุมขวาบนของระบบ
+                  หรือกดไอคอน <b>⊕</b> ท้ายแถบที่อยู่เว็บ หรือเมนู <b>⋮ → Install / ติดตั้งแอป</b>
+                  → จะได้ไอคอนบนเดสก์ท็อปและในเมนู Start</td></tr>
+          <tr><td><b>📱 Android (Chrome)</b></td>
+              <td>เปิด URL → กดปุ่ม <b>「⬇ ติดตั้งแอป」</b> ในระบบ หรือเมนู <b>⋮ → เพิ่มไปยังหน้าจอหลัก</b></td></tr>
+          <tr><td><b>📱 iPhone / iPad (Safari)</b></td>
+              <td>เปิด URL → ปุ่มแชร์ <b>⬆</b> → เลื่อนหา <b>เพิ่มไปยังหน้าจอโฮม (Add to Home Screen)</b> → เพิ่ม
+                  <br><span style="color:var(--muted);font-size:13.5px">iOS ไม่มีปุ่มติดตั้งอัตโนมัติ ต้องทำผ่านปุ่มแชร์เท่านั้น</span></td></tr>
+        </tbody>
+      </table>
+      <div class="note ok"><b>ทางลัดในไอคอนแอป</b> — เมื่อติดตั้งแล้ว คลิกขวาที่ไอคอนแอป (Windows/Android)
+        จะมีเมนูลัดไปยัง <b>รายงานใหม่ · ประวัติการรายงาน · สรุปผล</b> ได้ทันที</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ข. เปิดเป็นแอปจากไฟล์ในเครื่อง (Windows)</h2>
+    <div class="body">
+      <p>ถ้ายังไม่ได้นำระบบขึ้นเว็บ ก็เปิดให้ทำงานเหมือนแอปบนเดสก์ท็อปได้
+        โดยใช้ไฟล์ที่เตรียมไว้ในโฟลเดอร์นี้ — เปิดเป็น<b>หน้าต่างแยก ไม่มีแถบเบราว์เซอร์</b></p>
+      <ol class="steps">
+        <li>ดับเบิลคลิก <span class="file">เปิดเป็นแอป.cmd</span> — ระบบจะเปิดในหน้าต่างแอปทันที
+          (ใช้ Chrome หรือ Edge ที่มีอยู่ในเครื่อง)</li>
+        <li>ถ้าต้องการไอคอนถาวร ให้ดับเบิลคลิก <span class="file">สร้างทางลัดบนเดสก์ท็อป.cmd</span> หนึ่งครั้ง
+          → จะได้ไอคอน <b>「ระบบรายงานการปฏิบัติต่อสัตว์ทดลอง PSU-LASC」</b> บนเดสก์ท็อป</li>
+        <li>ต่อไปเปิดใช้งานได้จากไอคอนนั้นเลย</li>
+      </ol>
+      <div class="note info"><b>ถ้าเผยแพร่ระบบขึ้นเว็บแล้ว</b> — เปิดไฟล์ <span class="file">app-url.txt</span>
+        ใส่ URL ของระบบไว้บรรทัดเดียว (ไม่ต้องมี <code>#</code> นำหน้า) แล้วบันทึก
+        ตัวเปิดแอปจะเปิด URL นั้นแทนไฟล์ในเครื่อง ทำให้<b>เข้าสู่ระบบและซิงก์ข้อมูลได้</b>
+        จากนั้นสร้างทางลัดใหม่อีกครั้ง</div>
+      <div class="note warn">ถ้า Windows ขึ้นเตือนว่าบล็อกไฟล์ที่ดาวน์โหลดมา ให้คลิกขวาที่ไฟล์ <span class="file">.cmd</span>
+        → <b>Properties</b> → ติ๊ก <b>Unblock</b> → OK แล้วเปิดใหม่อีกครั้ง</div>
+      <div class="note bad"><b>ยังไม่ใช่โปรแกรมติดตั้ง .exe</b> — ระบบนี้เป็นเว็บแอปที่รันด้วยเบราว์เซอร์ที่มีอยู่ในเครื่อง
+        จึงไม่ต้องติดตั้งโปรแกรมเพิ่ม ไม่ต้องขอสิทธิ์ผู้ดูแลเครื่อง และอัปเดตได้ทันทีโดยไม่ต้องลงใหม่ทุกเครื่อง
+        หากหน่วยงานต้องการไฟล์ <code>.exe</code> จริง ๆ ต้องนำไปแพ็กด้วย Electron หรือ Tauri เพิ่มเติม</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>การอัปเดตแอป</h2>
+    <div class="body">
+      <ul>
+        <li><b>ติดตั้งจากเว็บ</b> — เมื่อเจ้าหน้าที่อัปโหลดไฟล์ใหม่ ระบบจะตรวจพบเองและขึ้นแถบ
+          <b>「🔄 มีแอปเวอร์ชันใหม่พร้อมใช้งาน」</b> ด้านบน กด <b>อัปเดตทันที</b> ก็ได้เวอร์ชันล่าสุด
+          (ตรวจให้อัตโนมัติทุกครั้งที่กลับมาที่แอป และทุก 30 นาที)</li>
+        <li><b>เปิดจากไฟล์ในเครื่อง</b> — คัดลอกไฟล์ <span class="file">index.html</span> ตัวใหม่ทับของเดิม</li>
+      </ul>
+      <div class="note info">ข้อมูลรายงานไม่หายเมื่ออัปเดต — ถ้าเข้าสู่ระบบอยู่ ข้อมูลอยู่บนฐานข้อมูลกลาง
+        ถ้าไม่ได้เข้าสู่ระบบ ข้อมูลยังอยู่ในเบราว์เซอร์ของเครื่องนั้น (ควรกด「⬇ สำรองข้อมูล (JSON)」ไว้เป็นระยะ)</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ถอนการติดตั้ง</h2>
+    <div class="body">
+      <table>
+        <tbody>
+          <tr><td style="width:26%"><b>Windows</b></td><td>เปิดแอป → เมนู ⋮ มุมขวาบนของหน้าต่างแอป → <b>ถอนการติดตั้ง</b>
+            หรือ Settings → Apps → ค้นหาชื่อแอป → Uninstall</td></tr>
+          <tr><td><b>Android</b></td><td>กดค้างที่ไอคอนแอป → ถอนการติดตั้ง</td></tr>
+          <tr><td><b>iPhone / iPad</b></td><td>กดค้างที่ไอคอน → ลบแอป</td></tr>
+          <tr><td><b>ทางลัดบนเดสก์ท็อป</b></td><td>ลบไอคอนทางลัดทิ้งได้เลย ไม่กระทบข้อมูล</td></tr>
+        </tbody>
+      </table>
+      <div class="note warn">การถอนการติดตั้งจะลบข้อมูลที่เก็บไว้ในเบราว์เซอร์ของเครื่องนั้นด้วย
+        — ถ้ายังไม่ได้เข้าสู่ระบบเพื่อซิงก์ ให้กด <b>「⬇ สำรองข้อมูล (JSON)」</b> เก็บไว้ก่อน</div>
+    </div>
+  </div>
+
+  <footer>
+    ศูนย์สัตว์ทดลอง มหาวิทยาลัยสงขลานครินทร์ · Laboratory Animal Service Center, PSU<br>
+    เอกสารฉบับนี้ปรับปรุงล่าสุด 11 กันยายน 2569 (ระบบเวอร์ชัน 1.3.0)
+  </footer>
+</div>
+</body>
+</html>

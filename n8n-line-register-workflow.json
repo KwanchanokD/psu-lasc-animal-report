@@ -1,0 +1,56 @@
+{
+  "name": "PSU-LASC — ลงทะเบียนสัตวแพทย์ผ่าน LINE",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lasc-line-webhook",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "c3000000-0000-4000-8000-000000000001",
+      "name": "รับข้อความจาก LINE",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        300
+      ],
+      "webhookId": "c3000000-0000-4000-8000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* =====================================================================\n   PSU-LASC — ลงทะเบียนสัตวแพทย์ผ่าน LINE Official Account\n   สัตวแพทย์พิมพ์ \"ลงทะเบียน ชื่อ-สกุล\" (หรือพิมพ์ \"ลงทะเบียน\" ในกลุ่ม LINE ที่เชิญบัญชีไว้)\n   → บันทึกคำขอไว้ที่ {ROOT}/vetRequests/{lineId} → เจ้าหน้าที่กด「➕ เพิ่มเป็นผู้รับแจ้ง」ในระบบ\n   คำขอทุกคำขอต้องผ่านการอนุมัติของเจ้าหน้าที่ก่อนจะได้รับแจ้งเตือนจริง\n\n   ใช้ Environment variables ชุดเดียวกับ workflow แจ้งเหตุ:\n     LASC_FB_DB_URL · LASC_FB_DB_SECRET · LASC_FB_ROOT · LASC_LINE_TOKEN\n   ===================================================================== */\nconst ENV = {\n  db:     String($env.LASC_FB_DB_URL || '').replace(/\\/+$/, ''),\n  secret: String($env.LASC_FB_DB_SECRET || ''),\n  root:   String($env.LASC_FB_ROOT || 'animalReport').replace(/^\\/+|\\/+$/g, ''),\n  line:   String($env.LASC_LINE_TOKEN || '')\n};\nconst http = (opts) => this.helpers.httpRequest(Object.assign({ json: true, timeout: 15000 }, opts));\nconst fbUrl = (path) => `${ENV.db}/${ENV.root}/${path}.json?auth=${encodeURIComponent(ENV.secret)}`;\nconst lineApi = (method, path, body) => http({\n  method, url: 'https://api.line.me' + path, headers: { Authorization: 'Bearer ' + ENV.line }, body\n});\nconst reply = (token, text) => token\n  ? lineApi('POST', '/v2/bot/message/reply', { replyToken: token, messages: [{ type: 'text', text }] }).catch(() => {})\n  : Promise.resolve();\n\nconst HELP = 'ระบบแจ้งเหตุสัตว์ทดลอง PSU:LASC\\n' +\n  '• พิมพ์ \"ลงทะเบียน ชื่อ-สกุล\" เพื่อขอรับแจ้งเหตุฉุกเฉิน/ปัญหาสุขภาพสัตว์ทาง LINE\\n' +\n  '• ในกลุ่มสัตวแพทย์ พิมพ์ \"ลงทะเบียน\" เพื่อให้ทั้งกลุ่มรับแจ้ง\\n' +\n  '• พิมพ์ \"ยกเลิก\" เพื่อแจ้งขอหยุดรับแจ้ง';\n\nconst events = (($input.first().json.body || {}).events) || [];\nconst done = [];\nif (!ENV.db || !ENV.secret || !ENV.line) return [{ json: { ok: false, error: 'ตั้งค่า LASC_FB_DB_URL / LASC_FB_DB_SECRET / LASC_LINE_TOKEN ไม่ครบ' } }];\n\nfor (const ev of events) {\n  const src = ev.source || {};\n  const lineId = src.groupId || src.roomId || src.userId || '';\n  const type = src.groupId || src.roomId ? 'group' : 'user';\n  if (!/^[UCR][0-9a-f]{32}$/.test(lineId)) continue;\n\n  if (ev.type === 'follow' || ev.type === 'join') { await reply(ev.replyToken, 'สวัสดีครับ 🙏\\n' + HELP); done.push(ev.type); continue; }\n  if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text') continue;\n\n  const text = String(ev.message.text || '').trim();\n  const m = text.match(/^(ลงทะเบียน|register)\\s*(.*)$/i);\n  if (m) {\n    let displayName = '';\n    try {\n      if (type === 'user') displayName = (await lineApi('GET', '/v2/bot/profile/' + lineId)).displayName || '';\n      else if (src.groupId) displayName = (await lineApi('GET', '/v2/bot/group/' + lineId + '/summary')).groupName || '';\n    } catch (e) {}\n    let byName = '';\n    if (type === 'group' && src.userId) {\n      try { byName = (await lineApi('GET', `/v2/bot/group/${lineId}/member/${src.userId}`)).displayName || ''; } catch (e) {}\n    }\n    await http({ method: 'PUT', url: fbUrl('vetRequests/' + lineId), body: {\n      lineId, type, displayName: displayName.slice(0, 100), name: m[2].trim().slice(0, 100),\n      requestedBy: byName.slice(0, 100), at: new Date().toISOString()\n    } });\n    await reply(ev.replyToken, `✅ รับคำขอรับแจ้งเหตุแล้ว${type === 'group' ? ' (ทั้งกลุ่ม)' : ''}\\n` +\n      'รอเจ้าหน้าที่ศูนย์สัตว์ทดลองอนุมัติในระบบ — เมื่ออนุมัติแล้วจะเริ่มได้รับแจ้งเตือนทันที');\n    done.push('register');\n    continue;\n  }\n  if (/^(ยกเลิก|unregister)$/i.test(text)) {\n    await http({ method: 'PUT', url: fbUrl('vetRequests/' + lineId), body: {\n      lineId, type, displayName: '', name: '⛔ ขอยกเลิกการรับแจ้ง', at: new Date().toISOString()\n    } });\n    await reply(ev.replyToken, 'ส่งคำขอยกเลิกให้เจ้าหน้าที่แล้ว — เจ้าหน้าที่จะปิดการแจ้งเตือนของท่านในระบบ');\n    done.push('unregister');\n    continue;\n  }\n  if (type === 'user' && /^(help|ช่วยเหลือ|วิธีใช้)$/i.test(text)) { await reply(ev.replyToken, HELP); done.push('help'); }\n}\nreturn [{ json: { ok: true, handled: done } }];\n"
+      },
+      "id": "c3000000-0000-4000-8000-000000000002",
+      "name": "บันทึกคำขอและตอบกลับ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "รับข้อความจาก LINE": {
+      "main": [
+        [
+          {
+            "node": "บันทึกคำขอและตอบกลับ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "psu-lasc-animal-report"
+  },
+  "tags": []
+}

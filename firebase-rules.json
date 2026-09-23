@@ -1,0 +1,131 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "allowed": {
+      ".read": "auth != null",
+      ".write": false
+    },
+
+    "animalReport": {
+      ".read":  "auth != null && root.child('allowed').child(auth.uid).exists()",
+      ".write": "auth != null && root.child('allowed').child(auth.uid).exists()",
+
+      "projects": {
+        ".read": "auth != null",
+        "$pid": {
+          ".validate": "newData.hasChildren(['id','projectNo','projectName']) && newData.child('id').val() == $pid && newData.child('projectNo').isString() && newData.child('projectNo').val().length > 0 && newData.child('projectNo').val().length <= 80 && newData.child('projectName').isString() && newData.child('projectName').val().length <= 300",
+          "piName":  { ".validate": "newData.isString() && newData.val().length <= 150" },
+          "piEmail": { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "species": { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "strain":  { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "approved": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000" }
+        }
+      },
+
+      "users": {
+        "$uid": {
+          ".read":  "auth != null && auth.uid == $uid",
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.hasChildren(['name','email'])",
+          "name":      { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120" },
+          "email":     { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "org":       { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "phone":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "createdAt": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "$other":    { ".validate": false }
+        }
+      },
+
+      "members": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid",
+          "status": { ".validate": "newData.val().matches(/^(approved|rejected|suspended|pending)$/)" }
+        }
+      },
+
+      "reports": {
+        "$uid": {
+          ".read":  "auth != null && auth.uid == $uid",
+          ".write": "auth != null && auth.uid == $uid && root.child('animalReport').child('members').child(auth.uid).child('status').val() == 'approved'",
+          "$rid": {
+            ".validate": "newData.hasChildren(['id','projectNo','species','qty','action','actionDate','reporter']) && newData.child('id').val() == $rid && newData.child('uid').val() == $uid && newData.child('action').val().matches(/^(euthanasia|offsite|died)$/) && newData.child('actionDate').val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.child('qty').isNumber() && newData.child('qty').val() > 0 && newData.child('qty').val() <= 100000",
+            "docNo":      { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "projectNo":  { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80" },
+            "species":    { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120" },
+            "strain":     { ".validate": "newData.isString() && newData.val().length <= 120" },
+            "sex":        { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "reporter":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 150" },
+            "euthMethod": { ".validate": "newData.val().matches(/^(Overdose anesthetic drug injection|Overdose anesthetic drug inhalation|Carbondioxide inhalation)$/)" },
+            "note":       { ".validate": "newData.isString() && newData.val().length <= 3000" }
+          }
+        }
+      },
+
+      "alerts": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid",
+          "$aid": {
+            ".write": "auth != null && auth.uid == $uid && newData.exists() && root.child('animalReport').child('members').child(auth.uid).child('status').val() == 'approved'",
+            ".validate": "newData.hasChildren(['id','uid','docNo','type','urgency','status','species','qty','location','detail','reporter','phone','createdAt']) && newData.child('id').val() == $aid && newData.child('uid').val() == $uid && newData.child('type').val().matches(/^(emergency|health)$/) && newData.child('urgency').val().matches(/^(critical|urgent|routine)$/) && newData.child('qty').isNumber() && newData.child('qty').val() > 0 && newData.child('qty').val() <= 100000",
+            "status":   { ".validate": "newData.val().matches(/^(new|ack|treating|closed)$/) && (root.child('allowed').child(auth.uid).exists() || (!data.exists() && newData.val() == 'new') || newData.val() == data.val())" },
+            "vetName":  { ".validate": "root.child('allowed').child(auth.uid).exists() || newData.val() == data.val()" },
+            "vetNote":  { ".validate": "root.child('allowed').child(auth.uid).exists() || newData.val() == data.val()" },
+            "outcome":  { ".validate": "root.child('allowed').child(auth.uid).exists() || newData.val() == data.val()" },
+            "docNo":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "species":  { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120" },
+            "location": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200" },
+            "reporter": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 150" },
+            "phone":    { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
+            "email":    { ".validate": "newData.isString() && newData.val().length <= 120" },
+            "detail":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 4000" },
+            "firstAid": { ".validate": "newData.isString() && newData.val().length <= 3000" }
+          }
+        }
+      },
+
+      "guestAlerts": {
+        "$aid": {
+          ".write": "!data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['id','docNo','type','urgency','status','species','qty','location','detail','reporter','phone','createdAt']) && newData.child('id').val() == $aid && $aid.matches(/^[a-z0-9]{8,20}$/) && newData.child('type').val().matches(/^(emergency|health)$/) && newData.child('urgency').val().matches(/^(critical|urgent|routine)$/) && newData.child('qty').isNumber() && newData.child('qty').val() > 0 && newData.child('qty').val() <= 100000",
+          "status":   { ".validate": "newData.val().matches(/^(new|ack|treating|closed)$/) && (newData.val() == 'new' || (auth != null && root.child('allowed').child(auth.uid).exists()))" },
+          "vetName":  { ".validate": "auth != null && root.child('allowed').child(auth.uid).exists()" },
+          "vetNote":  { ".validate": "auth != null && root.child('allowed').child(auth.uid).exists()" },
+          "outcome":  { ".validate": "auth != null && root.child('allowed').child(auth.uid).exists()" },
+          "uid":      { ".validate": false },
+          "docNo":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "species":  { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120" },
+          "location": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200" },
+          "reporter": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 150" },
+          "phone":    { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
+          "email":    { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "detail":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 4000" },
+          "firstAid": { ".validate": "newData.isString() && newData.val().length <= 3000" },
+          "createdAt": { ".validate": "newData.isString() && newData.val().length <= 40" }
+        }
+      },
+
+      "vets": {
+        "$vid": {
+          ".validate": "newData.hasChildren(['id','name']) && newData.child('id').val() == $vid",
+          "name":     { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 150" },
+          "email":    { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "lineId":   { ".validate": "newData.isString() && (newData.val() == '' || newData.val().matches(/^[UCR][0-9a-f]{32}$/))" },
+          "lineType": { ".validate": "newData.val().matches(/^(user|group)$/)" },
+          "active":   { ".validate": "newData.isBoolean()" }
+        }
+      },
+
+      "settings": {
+        "public": {
+          ".read": true,
+          "emails":  { ".validate": "newData.isString() && newData.val().length <= 500" },
+          "phones":  { ".validate": "newData.isString() && newData.val().length <= 1000" },
+          "hookUrl": { ".validate": "newData.isString() && newData.val().length <= 300 && (newData.val() == '' || newData.val().beginsWith('https://'))" },
+          "hookKey": { ".validate": "newData.isString() && newData.val().length <= 100" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "id": "psu-lasc-animal-report",
+  "name": "ระบบรายงานการปฏิบัติต่อสัตว์ทดลองของนักวิจัย PSU:LASC",
+  "short_name": "PSU:LASC รายงาน",
+  "description": "ระบบให้นักวิจัยรายงานการปฏิบัติต่อสัตว์ทดลองตามเลขที่โครงการวิจัย — การุณยฆาต (Euthanasia), การเคลื่อนย้ายออกนอกสถานที่ (Off-site transport) และสัตว์ตายระหว่างการศึกษา (Died during the study) พร้อมแจ้งเหตุฉุกเฉิน/ปัญหาสุขภาพสัตว์ถึงทีมสัตวแพทย์ — ศูนย์สัตว์ทดลอง มหาวิทยาลัยสงขลานครินทร์",
+  "lang": "th",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#1a5c9e",
+  "categories": ["productivity", "medical", "education"],
+  "launch_handler": { "client_mode": "focus-existing" },
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "หน้าบันทึกรายงานการปฏิบัติต่อสัตว์ทดลอง"
+    },
+    {
+      "src": "screenshot-narrow.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "หน้าบันทึกรายงานบนมือถือ"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "แจ้งเหตุฉุกเฉิน / ปัญหาสุขภาพสัตว์",
+      "short_name": "แจ้งเหตุ",
+      "description": "แจ้งเหตุฉุกเฉินหรือปัญหาสุขภาพสัตว์ทดลองถึงทีมสัตวแพทย์",
+      "url": "./index.html?tab=alert",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "รายงานใหม่",
+      "short_name": "รายงานใหม่",
+      "description": "บันทึกรายงานการปฏิบัติต่อสัตว์ทดลองรายการใหม่",
+      "url": "./index.html?tab=report",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "ประวัติการรายงาน",
+      "short_name": "ประวัติ",
+      "description": "ดู ค้นหา และพิมพ์รายงานที่บันทึกไว้",
+      "url": "./index.html?tab=history",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "สรุปผล",
+      "short_name": "สรุปผล",
+      "description": "สรุปจำนวนสัตว์แยกตามรายการ วิธีการุณยฆาต ชนิดสัตว์ และโครงการ",
+      "url": "./index.html?tab=summary",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
