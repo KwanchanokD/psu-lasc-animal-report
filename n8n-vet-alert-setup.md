@@ -33,6 +33,43 @@ n8n อ่านจากฐานข้อมูลเองทุกครั�
 
 ---
 
+## ขั้นที่ 0 — เตรียมเซิร์ฟเวอร์ n8n (ถ้ายังไม่มี)
+
+n8n ต้องเข้าถึงได้จากอินเทอร์เน็ตผ่าน **https://** เพราะทั้งเบราว์เซอร์ของผู้ใช้และ LINE ต้องเรียกเข้ามาได้
+และควรเปิดตลอด 24 ชม. เพราะใช้กับงานแจ้งเหตุฉุกเฉิน เลือกทางใดทางหนึ่ง
+
+| ทาง | เหมาะกับ | ข้อดี | ข้อเสีย |
+|---|---|---|---|
+| **ก. n8n Cloud** (บริการของ n8n เอง) | เริ่มใช้เร็วที่สุด ไม่มีคนดูแลเซิร์ฟเวอร์ | สมัครแล้วใช้ได้ทันที มี https ให้ อัปเดต/สำรองให้เอง มีช่วงทดลองใช้ฟรี | มีค่าบริการรายเดือน · **แก้ Environment variables ไม่ได้** ต้องกรอกค่าลงในบล็อก `CFG` ของโหนด Code แทน |
+| **ข. ติดตั้งบนเซิร์ฟเวอร์/VM ของหน่วยงาน** | มี IT ดูแล ต้องการเก็บข้อมูลไว้ในองค์กร | ฟรี ควบคุมเองได้เต็มที่ ใช้ `$env` ได้ | ต้องขอ VM + ชื่อโดเมนย่อย + ใบรับรอง https และมีคนดูแล |
+| **ค. รันบนเครื่องในศูนย์ฯ + Cloudflare Tunnel** | ทดลองใช้ก่อนโดยไม่เสียค่าบริการ | ฟรี ไม่ต้องเปิดพอร์ตที่ไฟร์วอลล์ | เครื่องต้องเปิดตลอด ถ้าเครื่องดับ/เน็ตหลุด การแจ้งเตือนจะหยุด — ไม่แนะนำเป็นระบบถาวรของงานฉุกเฉิน |
+
+**ทาง ก — n8n Cloud**
+1. สมัครที่ <https://n8n.io> → สร้าง workspace → จะได้ที่อยู่เช่น `https://xxxx.app.n8n.cloud`
+2. ข้ามขั้นที่ 3 (Environment variables) ไปเลย — ให้กรอกค่าทั้งหมดในบล็อก `CFG` ที่หัวโหนด Code ของ **ทั้งสอง workflow** แทน
+3. Webhook URL ที่ใช้จะเป็น `https://xxxx.app.n8n.cloud/webhook/lasc-vet-alert` และ `…/webhook/lasc-line-webhook`
+
+**ทาง ข — ติดตั้งเองด้วย Docker** (ตัวอย่างใช้ Caddy ทำ https ให้อัตโนมัติ)
+```bash
+# 1) ชี้ DNS ของโดเมนย่อย เช่น n8n.psu.ac.th มาที่ IP ของเซิร์ฟเวอร์ก่อน
+docker network create web
+docker run -d --restart unless-stopped --name caddy --network web \
+  -p 80:80 -p 443:443 -v caddy_data:/data \
+  caddy caddy reverse-proxy --from n8n.psu.ac.th --to n8n:5678
+docker run -d --restart unless-stopped --name n8n --network web \
+  -e N8N_HOST="n8n.psu.ac.th" -e WEBHOOK_URL="https://n8n.psu.ac.th/" \
+  -e N8N_PROTOCOL="https" -e GENERIC_TIMEZONE="Asia/Bangkok" -e TZ="Asia/Bangkok" \
+  -e N8N_BLOCK_ENV_ACCESS_IN_NODE="false" \
+  -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n
+```
+เปิด `https://n8n.psu.ac.th` แล้วตั้งบัญชีผู้ดูแลครั้งแรก จากนั้นเพิ่มตัวแปรในขั้นที่ 3 (เพิ่ม `-e` แล้วสร้างคอนเทนเนอร์ใหม่)
+
+**ทาง ค — Cloudflare Tunnel**
+ติดตั้ง n8n ด้วย Docker บนเครื่องในศูนย์ฯ (ไม่ต้องเปิดพอร์ต) แล้วสมัคร Cloudflare (ฟรี) →
+Zero Trust → Networks → Tunnels → สร้าง tunnel ชี้ไปที่ `http://localhost:5678` จะได้ที่อยู่ `https://…` มาใช้เป็น Webhook URL
+
+> เลือกทางไหนก็ได้ แต่ต้องจดที่อยู่ `https://…` ของ n8n ไว้ใช้ในขั้นที่ 1 และขั้นที่ 5
+
 ## ขั้นที่ 1 — สร้าง LINE Official Account + Messaging API
 
 > LINE Notify ปิดบริการแล้วตั้งแต่ 31 มี.ค. 2568 — ต้องใช้ **Messaging API** แทน
@@ -57,7 +94,11 @@ Firebase Console → ⚙ **Project settings** → **Service accounts** → **Dat
 > ใช้โปรเจกต์เดียวกับที่ระบบรายงานฯ ใช้อยู่ (ดู `firebase-config.js`)
 > ถ้ายังใช้โปรเจกต์ร่วม `LASC_FB_ROOT=data/animalReport` · ถ้าย้ายไปโปรเจกต์แยกแล้ว `LASC_FB_ROOT=animalReport`
 
-## ขั้นที่ 3 — ตั้งค่า Environment variables บนเซิร์ฟเวอร์ n8n
+## ขั้นที่ 3 — ตั้งค่าตัวแปร (Environment variables **หรือ** บล็อก CFG)
+
+> **n8n Cloud หรือเซิร์ฟเวอร์ที่ปิดการอ่าน `$env`** — ข้ามตารางคำสั่ง Docker ด้านล่างไป แล้วกรอกค่าชุดเดียวกันนี้
+> ในบล็อก `CFG = { … }` ที่หัวโหนด **Code** ของทั้งสอง workflow (โค้ดจะใช้ `$env` ก่อนเสมอ ถ้าไม่มีจึงใช้ค่าใน `CFG`)
+> ส่วนอีเมลผู้ส่ง ให้แก้ช่อง **From Email** ในโหนด「ส่งอีเมล (SMTP)」จาก `lasc@psu.ac.th` เป็นอีเมลจริงที่ใช้ส่ง
 
 | ตัวแปร | ตัวอย่าง | ใช้ทำอะไร |
 |---|---|---|
@@ -66,9 +107,9 @@ Firebase Console → ⚙ **Project settings** → **Service accounts** → **Dat
 | `LASC_FB_ROOT` | `animalReport` | ตำแหน่งข้อมูลของระบบ |
 | `LASC_ALERT_KEY` | `lasc-alert-8f2c19a4` | รหัสเชื่อมต่อ — ใส่ค่าเดียวกันในหน้าระบบ |
 | `LASC_LINE_TOKEN` | `xxxx…` | Channel access token จากขั้นที่ 1 |
-| `LASC_MAIL_FROM` | `LASC แจ้งเหตุ <lasc@psu.ac.th>` | ผู้ส่งอีเมล (ต้องเป็นบัญชีของ SMTP ที่ใช้) |
-| `LASC_APP_URL` | `https://lasc.psu.ac.th/animal-report/` | ลิงก์ในข้อความแจ้งเตือน |
-| `LASC_APP_ORIGIN` | `https://lasc.psu.ac.th` | (แนะนำ) จำกัดโดเมนที่เรียก webhook ได้ — ไม่ใส่ = ทุกโดเมน |
+| ~~`LASC_MAIL_FROM`~~ | — | ไม่ใช้แล้ว: แก้ช่อง **From Email** ในโหนด「ส่งอีเมล (SMTP)」โดยตรง (ต้องเป็นบัญชีของ SMTP ที่ใช้) |
+| `LASC_APP_URL` | `https://kwanchanokd.github.io/psu-lasc-animal-report/` | ลิงก์ในข้อความแจ้งเตือน |
+| ~~`LASC_APP_ORIGIN`~~ | — | ไม่ใช้แล้ว: ถ้าต้องการจำกัดโดเมนที่เรียก webhook ได้ ให้แก้ค่า `Access-Control-Allow-Origin` ในโหนด「ตอบกลับระบบรายงานฯ」จาก `*` เป็นโดเมนของระบบ |
 
 ตัวอย่าง Docker (ต่อจากคำสั่งเดิมใน `n8n-proxy-setup.md` / `lasc-medicine/n8n-setup.md`)
 
@@ -78,8 +119,7 @@ docker run -d --restart unless-stopped --name n8n -p 5678:5678 \
   -e GENERIC_TIMEZONE="Asia/Bangkok" -e TZ="Asia/Bangkok" \
   -e LASC_FB_DB_URL="https://....firebasedatabase.app" -e LASC_FB_DB_SECRET="..." -e LASC_FB_ROOT="animalReport" \
   -e LASC_ALERT_KEY="lasc-alert-8f2c19a4" -e LASC_LINE_TOKEN="..." \
-  -e LASC_MAIL_FROM="lasc@psu.ac.th" -e LASC_APP_URL="https://lasc.psu.ac.th/animal-report/" \
-  -e LASC_APP_ORIGIN="https://lasc.psu.ac.th" \
+  -e LASC_APP_URL="https://kwanchanokd.github.io/psu-lasc-animal-report/" \
   -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n
 ```
 
@@ -126,12 +166,12 @@ n8n → **Workflows** → **Import from File**
 
 | อาการ | สาเหตุ / ทางแก้ |
 |---|---|
-| หน้าระบบขึ้น「แจ้งเตือนอัตโนมัติไม่สำเร็จ (Failed to fetch)」 | URL ผิด / workflow ไม่ Active / `LASC_APP_ORIGIN` ไม่ตรงโดเมนที่เปิดระบบ |
+| หน้าระบบขึ้น「แจ้งเตือนอัตโนมัติไม่สำเร็จ (Failed to fetch)」 | URL ผิด / workflow ไม่ Active / ค่า `Access-Control-Allow-Origin` ในโหนดตอบกลับไม่ตรงโดเมนที่เปิดระบบ |
 | 「รหัสเชื่อมต่อไม่ถูกต้อง」 | ค่าในระบบไม่ตรงกับ `LASC_ALERT_KEY` |
 | 「ไม่พบเรื่องนี้ในฐานข้อมูล」 | `LASC_FB_DB_URL` / `LASC_FB_ROOT` ชี้ผิดโปรเจกต์หรือผิดตำแหน่ง |
 | 「ยังไม่มีสัตวแพทย์ในรายชื่อผู้รับแจ้ง」 | ยังไม่ได้เพิ่ม หรือทุกคนปิดรับระดับความเร่งด่วนนั้นไว้ |
 | LINE ไม่ส่ง แต่อีเมลส่ง | token หมดอายุ/ผิด · สัตวแพทย์บล็อก LINE OA · บอทถูกนำออกจากกลุ่ม · โควตาข้อความหมด (ดู error ใน Executions) |
-| อีเมลไม่ส่ง | ตรวจ credential SMTP และ `LASC_MAIL_FROM` · ดูใน n8n → Executions (โหนดอีเมลตั้งไว้ให้ทำงานต่อแม้ส่งไม่สำเร็จ) |
+| อีเมลไม่ส่ง | ตรวจ credential SMTP และช่อง From Email ในโหนดส่งอีเมล · ดูใน n8n → Executions (โหนดอีเมลตั้งไว้ให้ทำงานต่อแม้ส่งไม่สำเร็จ) |
 | พิมพ์「ลงทะเบียน」แล้วบอทเงียบ | Webhook URL ใน LINE Console ไม่ถูก / ไม่ได้เปิด Use webhook / workflow LINE ไม่ Active |
 
 > ถ้า n8n ล่ม ระบบยังบันทึกเรื่องเข้ากล่องรับแจ้งตามปกติ และให้ผู้แจ้งกด「✉ เปิดร่างอีเมล」+ ปุ่มโทรฉุกเฉินแทน

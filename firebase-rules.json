@@ -80,7 +80,10 @@
             "phone":    { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
             "email":    { ".validate": "newData.isString() && newData.val().length <= 120" },
             "detail":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 4000" },
-            "firstAid": { ".validate": "newData.isString() && newData.val().length <= 3000" }
+            "firstAid": { ".validate": "newData.isString() && newData.val().length <= 3000" },
+            "photos": {
+              "$i": { ".validate": "$i.matches(/^[0-2]$/) && newData.isString() && newData.val().length <= 900000 && newData.val().beginsWith('data:image/')" }
+            }
           }
         }
       },
@@ -102,7 +105,10 @@
           "email":    { ".validate": "newData.isString() && newData.val().length <= 120" },
           "detail":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 4000" },
           "firstAid": { ".validate": "newData.isString() && newData.val().length <= 3000" },
-          "createdAt": { ".validate": "newData.isString() && newData.val().length <= 40" }
+          "createdAt": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "photos": {
+            "$i": { ".validate": "$i.matches(/^[0-2]$/) && newData.isString() && newData.val().length <= 900000 && newData.val().beginsWith('data:image/')" }
+          }
         }
       },
 

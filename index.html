@@ -114,6 +114,8 @@
     margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 1px dashed var(--border);
   }
   .hint { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .en { color: var(--muted); font-weight: 400; font-size: 12.3px; }
+  .card-head h2 .en { font-size: 12.8px; }
 
   /* ---------- Buttons ---------- */
   .btn {
@@ -296,6 +298,17 @@
     content: ''; position: absolute; left: -20px; top: 7px; width: 10px; height: 10px;
     border-radius: 50%; background: var(--primary);
   }
+  /* ---------- รูปภาพแนบ ---------- */
+  .photo-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .photo-item { position: relative; width: 108px; height: 108px; border-radius: 9px; overflow: hidden; border: 1px solid var(--border); background: #f2f5f8; }
+  .photo-item img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+  .photo-item button {
+    position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; border: none; border-radius: 50%;
+    background: rgba(192,57,43,.9); color: #fff; font-size: 14px; line-height: 1; cursor: pointer;
+  }
+  .photo-note { font-size: 12.3px; color: var(--muted); }
+  @media print { .photo-item { width: 150px; height: auto; } .photo-item button { display: none; } }
+
   .sent-box {
     background: #e6f4f0; border: 1px solid #b7dfd3; color: #0a5a49;
     border-radius: 8px; padding: 11px 14px; font-size: 13.5px; margin-top: 12px;
@@ -359,17 +372,17 @@
   <div id="tab_report">
     <div class="card">
       <div class="card-head">
-        <h2>1️⃣ เลือกเลขที่โครงการวิจัยที่ต้องการรายงาน</h2>
+        <h2>1️⃣ เลือกเลขที่โครงการวิจัยที่ต้องการรายงาน <span class="en">Select research protocol</span></h2>
         <span class="badge blue" id="projCountBadge"></span>
       </div>
       <div class="card-body">
         <div class="grid grid-2">
-          <label class="field">เลขที่โครงการวิจัย <span class="req">*</span>
+          <label class="field">เลขที่โครงการวิจัย <span class="en">Protocol number</span> <span class="req">*</span>
             <select id="r_project" onchange="onPickProject()">
-              <option value="">— เลือกเลขที่โครงการ —</option>
+              <option value="">— เลือกเลขที่โครงการ / Select protocol —</option>
             </select>
           </label>
-          <label class="field">ค้นหาโครงการ (เลขที่ / ชื่อโครงการ / PI)
+          <label class="field">ค้นหาโครงการ (เลขที่ / ชื่อโครงการ / PI) <span class="en">Search protocol</span>
             <input type="text" id="r_projSearch" placeholder="พิมพ์เพื่อกรองรายการโครงการ" oninput="fillProjectSelect(this.value)">
           </label>
         </div>
@@ -391,10 +404,10 @@
       <input type="hidden" id="r_editId">
 
       <div class="card">
-        <div class="card-head"><h2>2️⃣ ข้อมูลสัตว์ทดลองที่ต้องการรายงาน</h2></div>
+        <div class="card-head"><h2>2️⃣ ข้อมูลสัตว์ทดลองที่ต้องการรายงาน <span class="en">Animal information</span></h2></div>
         <div class="card-body">
           <div class="grid grid-4">
-            <label class="field">ชนิดสัตว์ทดลอง <span class="req">*</span>
+            <label class="field">ชนิดสัตว์ทดลอง <span class="en">Species</span> <span class="req">*</span>
               <input type="text" id="r_species" required list="speciesList" placeholder="เช่น หนูเมาส์ (Mouse)">
               <datalist id="speciesList">
                 <option value="หนูเมาส์ (Mouse)"></option>
@@ -409,16 +422,16 @@
                 <option value="ลิง (Monkey)"></option>
               </datalist>
             </label>
-            <label class="field">เพศ <span class="req">*</span>
+            <label class="field">เพศ <span class="en">Sex</span> <span class="req">*</span>
               <select id="r_sex" required>
-                <option value="">— เลือก —</option>
+                <option value="">— เลือก / Select —</option>
                 <option value="เพศผู้ (Male)">เพศผู้ (Male)</option>
                 <option value="เพศเมีย (Female)">เพศเมีย (Female)</option>
                 <option value="ทั้งสองเพศ (Male/Female)">ทั้งสองเพศ (Male/Female)</option>
                 <option value="ไม่ระบุเพศ (Not specified)">ไม่ระบุเพศ (Not specified)</option>
               </select>
             </label>
-            <label class="field">สายพันธุ์ <span class="req">*</span>
+            <label class="field">สายพันธุ์ <span class="en">Strain</span> <span class="req">*</span>
               <input type="text" id="r_strain" required list="strainList" placeholder="เช่น ICR, C57BL/6, Wistar">
               <datalist id="strainList">
                 <option value="ICR"></option>
@@ -430,17 +443,18 @@
                 <option value="New Zealand White"></option>
               </datalist>
             </label>
-            <label class="field">จำนวนที่รายงาน (ตัว) <span class="req">*</span>
+            <label class="field">จำนวนที่รายงาน (ตัว) <span class="en">Number of animals</span> <span class="req">*</span>
               <input type="number" id="r_qty" required min="1" step="1" placeholder="เช่น 10" oninput="renderQuota()">
             </label>
           </div>
-          <div class="hint">ℹ️ ระบบเติมค่าจากข้อมูลโครงการให้อัตโนมัติ — แก้ไขได้หากรุ่นที่รายงานนี้ต่างจากที่ระบุในโครงการ</div>
+          <div class="hint">ℹ️ ระบบเติมค่าจากข้อมูลโครงการให้อัตโนมัติ — แก้ไขได้หากรุ่นที่รายงานนี้ต่างจากที่ระบุในโครงการ
+            <span class="en">Prefilled from the protocol — edit if this batch differs</span></div>
           <div id="qtyWarn"></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-head"><h2>3️⃣ เลือกรายการที่ต้องการรายงาน</h2></div>
+        <div class="card-head"><h2>3️⃣ เลือกรายการที่ต้องการรายงาน <span class="en">Select item to report</span></h2></div>
         <div class="card-body">
           <div class="action-grid">
             <label class="action-opt" id="actOpt_euthanasia">
@@ -466,7 +480,7 @@
           <!-- ---- Euthanasia ---- -->
           <div id="panel_euthanasia" class="sub-panel hidden">
             <div class="section-title">⚖️ รายละเอียดการุณยฆาต (Euthanasia)</div>
-            <label class="field" style="margin-bottom:8px">วิธีการทำการุณยฆาต (Euthanasia method) <span class="req">*</span></label>
+            <label class="field" style="margin-bottom:8px">วิธีการทำการุณยฆาต <span class="en">Euthanasia method</span> <span class="req">*</span></label>
             <div class="radio-list" id="euthMethodList">
               <label class="radio-row" data-m="1">
                 <input type="radio" name="r_euthMethod" value="Overdose anesthetic drug injection" onchange="onPickEuthMethod()">
@@ -492,41 +506,41 @@
             </div>
             <br>
             <div class="grid grid-3">
-              <label class="field">ชื่อยา / สารที่ใช้
+              <label class="field">ชื่อยา / สารที่ใช้ <span class="en">Drug / agent</span>
                 <input type="text" id="r_euthDrug" placeholder="เช่น Pentobarbital sodium, Isoflurane, CO₂">
               </label>
-              <label class="field">ขนาด / ความเข้มข้นที่ใช้
+              <label class="field">ขนาด / ความเข้มข้นที่ใช้ <span class="en">Dose / concentration</span>
                 <input type="text" id="r_euthDose" placeholder="เช่น 150 mg/kg IP, 5% ในกล่อง, อัตราไหล 30–70% ของปริมาตรกล่อง/นาที">
               </label>
-              <label class="field">ผู้ดำเนินการการุณยฆาต
+              <label class="field">ผู้ดำเนินการการุณยฆาต <span class="en">Performed by</span>
                 <input type="text" id="r_euthOperator" placeholder="ชื่อ-สกุล ผู้ดำเนินการ">
               </label>
             </div>
             <br>
             <div class="grid grid-2">
-              <label class="field">เหตุผลของการทำการุณยฆาต
+              <label class="field">เหตุผลของการทำการุณยฆาต <span class="en">Reason for euthanasia</span>
                 <select id="r_euthReason">
-                  <option value="">— เลือก —</option>
+                  <option value="">— เลือก / Select —</option>
                   <option>สิ้นสุดการทดลองตามโปรโตคอล (End of study)</option>
                   <option>ถึงจุดยุติด้วยเหตุผลด้านมนุษยธรรม (Humane endpoint)</option>
-                  <option>สัตว์ป่วย / บาดเจ็บ / ทรมาน</option>
-                  <option>เก็บตัวอย่างเนื้อเยื่อ / อวัยวะ</option>
+                  <option>สัตว์ป่วย / บาดเจ็บ / ทรมาน (Sick / injured / suffering)</option>
+                  <option>เก็บตัวอย่างเนื้อเยื่อ / อวัยวะ (Tissue / organ collection)</option>
                   <option>สัตว์เหลือจากการทดลอง (Surplus animals)</option>
-                  <option>อื่น ๆ (ระบุในหมายเหตุ)</option>
+                  <option>อื่น ๆ ระบุในหมายเหตุ (Other — specify in notes)</option>
                 </select>
               </label>
-              <label class="field">การยืนยันการตาย (Confirmation of death)
+              <label class="field">การยืนยันการตาย <span class="en">Confirmation of death</span>
                 <select id="r_euthConfirm">
-                  <option value="">— เลือก —</option>
-                  <option>ไม่มีการเต้นของหัวใจและการหายใจ</option>
-                  <option>ยืนยันโดยวิธีเสริม (secondary method) เช่น Cervical dislocation</option>
-                  <option>ยืนยันโดยวิธีเสริม เช่น Exsanguination / เปิดช่องอก</option>
-                  <option>อื่น ๆ (ระบุในหมายเหตุ)</option>
+                  <option value="">— เลือก / Select —</option>
+                  <option>ไม่มีการเต้นของหัวใจและการหายใจ (No heartbeat and respiration)</option>
+                  <option>ยืนยันด้วยวิธีเสริม เช่น Cervical dislocation (Secondary method)</option>
+                  <option>ยืนยันด้วยวิธีเสริม เช่น Exsanguination / เปิดช่องอก (Secondary method)</option>
+                  <option>อื่น ๆ ระบุในหมายเหตุ (Other — specify in notes)</option>
                 </select>
               </label>
             </div>
             <br>
-            <label class="field">การจัดการซากสัตว์ทดลอง
+            <label class="field">การจัดการซากสัตว์ทดลอง <span class="en">Carcass disposal</span>
               <input type="text" id="r_euthCarcass" placeholder="เช่น แช่แข็งรอส่งกำจัดโดยบริษัทที่ได้รับอนุญาต / เผาทำลาย">
             </label>
           </div>
@@ -535,41 +549,41 @@
           <div id="panel_offsite" class="sub-panel hidden">
             <div class="section-title">🚚 รายละเอียดการเคลื่อนย้ายสัตว์ทดลองออกนอกสถานที่ (Off-site transport)</div>
             <div class="grid grid-2">
-              <label class="field">สถานที่ปลายทาง <span class="req">*</span>
+              <label class="field">สถานที่ปลายทาง <span class="en">Destination</span> <span class="req">*</span>
                 <input type="text" id="r_offDest" placeholder="เช่น อาคารวิจัย คณะวิทยาศาสตร์ / ฟาร์มทดลอง อ.หาดใหญ่">
               </label>
-              <label class="field">วัตถุประสงค์ของการเคลื่อนย้าย
+              <label class="field">วัตถุประสงค์ของการเคลื่อนย้าย <span class="en">Purpose of transport</span>
                 <input type="text" id="r_offPurpose" placeholder="เช่น เก็บข้อมูลภาคสนาม, ใช้เครื่องมือที่หน่วยงานปลายทาง">
               </label>
             </div>
             <br>
             <div class="grid grid-3">
-              <label class="field">ผู้รับผิดชอบระหว่างการเคลื่อนย้าย
+              <label class="field">ผู้รับผิดชอบระหว่างการเคลื่อนย้าย <span class="en">Person responsible</span>
                 <input type="text" id="r_offResponsible" placeholder="ชื่อ-สกุล ผู้ควบคุมการขนย้าย">
               </label>
-              <label class="field">ยานพาหนะ / วิธีการขนย้าย
+              <label class="field">ยานพาหนะ / วิธีการขนย้าย <span class="en">Vehicle / method</span>
                 <input type="text" id="r_offVehicle" placeholder="เช่น รถตู้ปรับอากาศ กล่องขนย้ายมาตรฐาน">
               </label>
-              <label class="field">ระยะเวลาเดินทางโดยประมาณ
+              <label class="field">ระยะเวลาเดินทางโดยประมาณ <span class="en">Estimated travel time</span>
                 <input type="text" id="r_offDuration" placeholder="เช่น 45 นาที">
               </label>
             </div>
             <br>
             <div class="grid grid-2">
-              <label class="field">การนำสัตว์กลับเข้าสถานที่เลี้ยง
+              <label class="field">การนำสัตว์กลับเข้าสถานที่เลี้ยง <span class="en">Return to facility</span>
                 <select id="r_offReturn">
-                  <option value="">— เลือก —</option>
-                  <option>นำกลับเข้าสถานที่เลี้ยงเดิม</option>
-                  <option>ไม่นำกลับ (สิ้นสุด ณ ปลายทาง)</option>
-                  <option>ยังไม่ระบุ</option>
+                  <option value="">— เลือก / Select —</option>
+                  <option>นำกลับเข้าสถานที่เลี้ยงเดิม (Returned to facility)</option>
+                  <option>ไม่นำกลับ สิ้นสุด ณ ปลายทาง (Not returned)</option>
+                  <option>ยังไม่ระบุ (Not specified)</option>
                 </select>
               </label>
-              <label class="field">วันที่คาดว่าจะนำกลับ (ถ้ามี)
+              <label class="field">วันที่คาดว่าจะนำกลับ (ถ้ามี) <span class="en">Expected return date</span>
                 <input type="date" id="r_offReturnDate">
               </label>
             </div>
             <br>
-            <label class="field">มาตรการดูแลสวัสดิภาพสัตว์ระหว่างการเคลื่อนย้าย
+            <label class="field">มาตรการดูแลสวัสดิภาพสัตว์ระหว่างการเคลื่อนย้าย <span class="en">Animal welfare measures during transport</span>
               <textarea id="r_offWelfare" placeholder="เช่น ควบคุมอุณหภูมิ 20–24 °C, มีอาหาร/น้ำ (เจล), ระบายอากาศเพียงพอ, ลดเสียงและแรงสั่นสะเทือน"></textarea>
             </label>
           </div>
@@ -578,53 +592,53 @@
           <div id="panel_died" class="sub-panel hidden">
             <div class="section-title">🕊️ รายละเอียดสัตว์ตายระหว่างการศึกษา (Died during the study)</div>
             <div class="grid grid-3">
-              <label class="field">วันที่พบสัตว์ตาย <span class="req">*</span>
+              <label class="field">วันที่พบสัตว์ตาย <span class="en">Date found dead</span> <span class="req">*</span>
                 <input type="date" id="r_diedDate">
               </label>
-              <label class="field">เวลาที่พบ (โดยประมาณ)
+              <label class="field">เวลาที่พบ (โดยประมาณ) <span class="en">Approximate time</span>
                 <input type="time" id="r_diedTime">
               </label>
-              <label class="field">ผู้พบเหตุ
+              <label class="field">ผู้พบเหตุ <span class="en">Found by</span>
                 <input type="text" id="r_diedFinder" placeholder="ชื่อ-สกุล ผู้พบสัตว์ตาย">
               </label>
             </div>
             <br>
             <div class="grid grid-2">
-              <label class="field">สาเหตุการตายที่สงสัย
+              <label class="field">สาเหตุการตายที่สงสัย <span class="en">Suspected cause of death</span>
                 <select id="r_diedCause">
-                  <option value="">— เลือก —</option>
-                  <option>ภาวะแทรกซ้อนจากหัตถการ / การให้สารทดลอง</option>
-                  <option>ผลข้างเคียงของสารทดสอบ</option>
-                  <option>ภาวะเจ็บป่วย / ติดเชื้อ</option>
-                  <option>ภาวะจากการวางยาสลบ</option>
-                  <option>สัตว์กัดกันเอง / อุบัติเหตุในกรง</option>
-                  <option>ไม่ทราบสาเหตุ</option>
-                  <option>อื่น ๆ (ระบุในหมายเหตุ)</option>
+                  <option value="">— เลือก / Select —</option>
+                  <option>ภาวะแทรกซ้อนจากหัตถการ / การให้สารทดลอง (Procedure-related complication)</option>
+                  <option>ผลข้างเคียงของสารทดสอบ (Adverse effect of test substance)</option>
+                  <option>ภาวะเจ็บป่วย / ติดเชื้อ (Illness / infection)</option>
+                  <option>ภาวะจากการวางยาสลบ (Anesthesia-related)</option>
+                  <option>สัตว์กัดกันเอง / อุบัติเหตุในกรง (Fighting / cage accident)</option>
+                  <option>ไม่ทราบสาเหตุ (Unknown)</option>
+                  <option>อื่น ๆ ระบุในหมายเหตุ (Other — specify in notes)</option>
                 </select>
               </label>
-              <label class="field">การชันสูตรซาก (Necropsy)
+              <label class="field">การชันสูตรซาก <span class="en">Necropsy</span>
                 <select id="r_diedNecropsy">
-                  <option value="">— เลือก —</option>
-                  <option>ดำเนินการชันสูตร</option>
-                  <option>ไม่ได้ชันสูตร</option>
-                  <option>อยู่ระหว่างดำเนินการ</option>
+                  <option value="">— เลือก / Select —</option>
+                  <option>ดำเนินการชันสูตร (Necropsy performed)</option>
+                  <option>ไม่ได้ชันสูตร (Not performed)</option>
+                  <option>อยู่ระหว่างดำเนินการ (In progress)</option>
                 </select>
               </label>
             </div>
             <br>
-            <label class="field">อาการผิดปกติที่พบก่อนตาย / ผลการชันสูตร
+            <label class="field">อาการผิดปกติที่พบก่อนตาย / ผลการชันสูตร <span class="en">Clinical signs before death / necropsy findings</span>
               <textarea id="r_diedDetail" placeholder="เช่น ซึม ไม่กินอาหาร ขนหยอง น้ำหนักลด 20% ภายใน 3 วัน / ผลชันสูตรพบ..."></textarea>
             </label>
             <br>
             <div class="grid grid-2">
-              <label class="field">การแจ้งสัตวแพทย์ผู้ดูแล
+              <label class="field">การแจ้งสัตวแพทย์ผู้ดูแล <span class="en">Attending veterinarian notified</span>
                 <select id="r_diedVet">
-                  <option value="">— เลือก —</option>
-                  <option>แจ้งแล้ว</option>
-                  <option>ยังไม่ได้แจ้ง</option>
+                  <option value="">— เลือก / Select —</option>
+                  <option>แจ้งแล้ว (Notified)</option>
+                  <option>ยังไม่ได้แจ้ง (Not yet notified)</option>
                 </select>
               </label>
-              <label class="field">การจัดการซากสัตว์ทดลอง
+              <label class="field">การจัดการซากสัตว์ทดลอง <span class="en">Carcass disposal</span>
                 <input type="text" id="r_diedCarcass" placeholder="เช่น แช่แข็งรอส่งกำจัดโดยบริษัทที่ได้รับอนุญาต">
               </label>
             </div>
@@ -633,38 +647,38 @@
       </div>
 
       <div class="card">
-        <div class="card-head"><h2>4️⃣ ข้อมูลการดำเนินการและผู้รายงาน</h2></div>
+        <div class="card-head"><h2>4️⃣ ข้อมูลการดำเนินการและผู้รายงาน <span class="en">Procedure details and reporter</span></h2></div>
         <div class="card-body">
           <div class="grid grid-3">
-            <label class="field">วันที่ดำเนินการ <span class="req">*</span>
+            <label class="field">วันที่ดำเนินการ <span class="en">Date of procedure</span> <span class="req">*</span>
               <input type="date" id="r_date" required>
             </label>
-            <label class="field">สถานที่ดำเนินการ
+            <label class="field">สถานที่ดำเนินการ <span class="en">Location</span>
               <input type="text" id="r_place" placeholder="เช่น ห้องหัตถการ ศูนย์สัตว์ทดลอง ม.อ.">
             </label>
-            <label class="field">จำนวนสัตว์คงเหลือในโครงการหลังรายงานนี้ (ตัว)
+            <label class="field">จำนวนสัตว์คงเหลือในโครงการหลังรายงานนี้ (ตัว) <span class="en">Remaining in protocol</span>
               <input type="text" id="r_remainShow" readonly style="background:#f4f6f9">
             </label>
           </div>
           <br>
           <div class="grid grid-3">
-            <label class="field">ชื่อผู้รายงาน <span class="req">*</span>
+            <label class="field">ชื่อผู้รายงาน <span class="en">Reporter name</span> <span class="req">*</span>
               <input type="text" id="r_reporter" required placeholder="ชื่อ-สกุล ผู้รายงาน">
             </label>
-            <label class="field">อีเมลผู้รายงาน
+            <label class="field">อีเมลผู้รายงาน <span class="en">Reporter email</span>
               <input type="email" id="r_reporterEmail" placeholder="name@psu.ac.th">
             </label>
-            <label class="field">เบอร์โทรติดต่อ
+            <label class="field">เบอร์โทรติดต่อ <span class="en">Phone</span>
               <input type="tel" id="r_reporterPhone" placeholder="08x-xxx-xxxx">
             </label>
           </div>
           <br>
-          <label class="field">หมายเหตุเพิ่มเติม
+          <label class="field">หมายเหตุเพิ่มเติม <span class="en">Additional notes</span>
             <textarea id="r_note" placeholder="ข้อมูลเพิ่มเติมที่ต้องการแจ้งคณะกรรมการ / เจ้าหน้าที่ศูนย์สัตว์ทดลอง"></textarea>
           </label>
           <div class="form-actions">
-            <button type="submit" class="btn success" id="r_submitBtn">💾 บันทึกรายงาน</button>
-            <button type="button" class="btn secondary" onclick="resetReportForm()">ล้างฟอร์ม</button>
+            <button type="submit" class="btn success" id="r_submitBtn">💾 บันทึกรายงาน / Save report</button>
+            <button type="button" class="btn secondary" onclick="resetReportForm()">ล้างฟอร์ม / Clear</button>
             <button type="button" class="btn secondary hidden" id="r_cancelBtn" onclick="cancelEditReport()">ยกเลิกการแก้ไข</button>
           </div>
           <div class="note-box">
@@ -713,7 +727,7 @@
           <div id="a_emergencyPanel" class="sub-panel hidden">
             <label class="field">ลักษณะเหตุฉุกเฉิน <span class="req">*</span>
               <select id="a_category">
-                <option value="">— เลือก —</option>
+                <option value="">— เลือก / Select —</option>
                 <option>สัตว์บาดเจ็บรุนแรง / เลือดออกมาก</option>
                 <option>สัตว์ชัก / หมดสติ / หายใจลำบาก</option>
                 <option>สัตว์ตายหลายตัวพร้อมกัน / ตายผิดปกติ</option>
@@ -757,7 +771,7 @@
             </label>
             <label class="field">เพศ
               <select id="a_sex">
-                <option value="">— เลือก —</option>
+                <option value="">— เลือก / Select —</option>
                 <option>เพศผู้ (Male)</option>
                 <option>เพศเมีย (Female)</option>
                 <option>ทั้งสองเพศ (Male/Female)</option>
@@ -805,9 +819,16 @@
             <textarea id="a_detail" required placeholder="เช่น พบหนู 2 ตัวซึม ไม่กินอาหาร หลังโก่ง ขนหยอง หลังได้รับสารทดสอบวันที่ 3 น้ำหนักลด 18% จากวันเริ่มต้น"></textarea>
           </label>
           <br>
-          <label class="field">การดำเนินการเบื้องต้นที่ทำไปแล้ว
+          <label class="field">การดำเนินการเบื้องต้นที่ทำไปแล้ว <span class="en">Initial action taken</span>
             <textarea id="a_firstAid" placeholder="เช่น แยกกรง ให้อาหารเปียก/เจลน้ำ วางแผ่นให้ความอบอุ่น หยุดให้สารทดสอบ"></textarea>
           </label>
+          <br>
+          <label class="field">📷 แนบรูปภาพอาการ / ที่เกิดเหตุ (ถ้ามี) <span class="en">Attach photos (optional)</span>
+            <input type="file" id="a_photoInput" accept="image/*" multiple onchange="addAlertPhotos(event)">
+          </label>
+          <div class="hint">ถ่ายจากมือถือได้ทันที · แนบได้สูงสุด 3 รูป · ระบบย่อขนาดรูปให้อัตโนมัติก่อนส่ง
+            <span class="en">Take a photo with your phone — up to 3 images, resized automatically</span></div>
+          <div id="a_photoBox" class="photo-grid"></div>
         </div>
       </div>
 
@@ -1179,7 +1200,7 @@
               </label>
               <label class="field">เพศ
                 <select id="f_sex">
-                  <option value="">— เลือก —</option>
+                  <option value="">— เลือก / Select —</option>
                   <option>เพศผู้ (Male)</option>
                   <option>เพศเมีย (Female)</option>
                   <option>ทั้งสองเพศ (Male/Female)</option>
@@ -1301,7 +1322,7 @@
 'use strict';
 
 /* ==================== ค่าคงที่ / ข้อมูลอ้างอิง ==================== */
-const APP_VERSION = '1.6.0 (5 ต.ค. 2569)';
+const APP_VERSION = '1.7.0 (5 ต.ค. 2569)';
 const STORE_KEY = 'lascAnimalReportData_v1';
 const ROLE_KEY  = 'lascAnimalReportRole';
 const PIN_KEY   = 'lascAnimalReportAdminPin';
@@ -1334,9 +1355,24 @@ function load() {
   if (!Array.isArray(db.reports))  db.reports  = [];
   if (!Array.isArray(db.alerts))   db.alerts   = [];
 }
+/* สำเนาสำหรับเก็บในเครื่อง — ตัดรูปภาพออก (เก็บแค่จำนวน) เพราะ localStorage มีพื้นที่จำกัด
+   รูปตัวจริงอยู่บนระบบกลางและโหลดกลับมาเองเมื่อเข้าสู่ระบบ */
+function dbForStorage() {
+  if (!db.alerts.some(a => photosOf(a).length)) return db;
+  const copy = Object.assign({}, db);
+  copy.alerts = db.alerts.map(a => {
+    const n = photosOf(a).length;
+    if (!n) return a;
+    const c = Object.assign({}, a);
+    delete c.photos;
+    c.photoCount = n;
+    return c;
+  });
+  return copy;
+}
 function persist() {
   db.updatedAt = new Date().toISOString();
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(db)); }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(dbForStorage())); }
   catch (e) {
     if (storageOk) {
       storageOk = false;
@@ -1937,7 +1973,7 @@ function fillProjectSelect(filter) {
   const list = db.projects
     .filter(p => !q || [p.projectNo, p.projectName, p.piName].some(x => (x || '').toLowerCase().includes(q)))
     .sort((a, b) => (a.projectNo || '').localeCompare(b.projectNo || '', 'th'));
-  sel.innerHTML = '<option value="">— เลือกเลขที่โครงการ —</option>' + list.map(p =>
+  sel.innerHTML = '<option value="">— เลือกเลขที่โครงการ / Select protocol —</option>' + list.map(p =>
     `<option value="${p.id}">${esc(p.projectNo)} — ${esc(p.projectName)}</option>`).join('');
   if (list.some(p => p.id === keep)) sel.value = keep;
   else if (keep) onPickProject();
@@ -2662,7 +2698,8 @@ function alertRows(a) {
     ['สิ่งที่ต้องการจากทีมสัตวแพทย์', a.request],
     ['ผู้แจ้ง', a.reporter],
     ['เบอร์โทรผู้แจ้ง', a.phone],
-    ['อีเมลผู้แจ้ง', a.email]
+    ['อีเมลผู้แจ้ง', a.email],
+    ['รูปภาพแนบ', (photosOf(a).length || a.photoCount) ? (photosOf(a).length || a.photoCount) + ' รูป' : '']
   ];
 }
 function alertMailHtml(a, lead) {
@@ -2692,6 +2729,90 @@ function alertMailto(a) {
 function openMailto(url) {
   const l = document.createElement('a');
   l.href = url; document.body.appendChild(l); l.click(); l.remove();
+}
+
+/* ---------- รูปภาพแนบในการแจ้งเหตุ ---------- */
+const MAX_PHOTOS = 3;
+const PHOTO_MAX_PX = 1280;      /* ย่อด้านยาวสุดเหลือเท่านี้ */
+const PHOTO_MAX_BYTES = 250000; /* ขนาดต่อรูปหลังย่อ (โดยประมาณ) */
+let alertPhotos = [];
+
+/* ย่อรูปด้วย canvas ให้เล็กลงก่อนเก็บ — คืนค่าเป็น data URL (JPEG) */
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error('อ่านไฟล์รูปไม่ได้'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('ไฟล์นี้ไม่ใช่รูปภาพที่เปิดได้'));
+      img.onload = () => {
+        const scale = Math.min(1, PHOTO_MAX_PX / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * scale);
+        cv.height = Math.round(img.height * scale);
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        let q = 0.75, url = cv.toDataURL('image/jpeg', q);
+        while (url.length * 0.75 > PHOTO_MAX_BYTES && q > 0.35) {
+          q -= 0.1;
+          url = cv.toDataURL('image/jpeg', q);
+        }
+        resolve(url);
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+async function addAlertPhotos(ev) {
+  const files = [...(ev.target.files || [])];
+  ev.target.value = '';
+  for (const f of files) {
+    if (alertPhotos.length >= MAX_PHOTOS) { alert(`แนบรูปได้สูงสุด ${MAX_PHOTOS} รูป`); break; }
+    if (!/^image\//.test(f.type)) { alert('ไฟล์ "' + f.name + '" ไม่ใช่รูปภาพ'); continue; }
+    try { alertPhotos.push(await compressImage(f)); }
+    catch (e) { alert('แนบรูป "' + f.name + '" ไม่สำเร็จ: ' + e.message); }
+  }
+  renderAlertPhotos();
+}
+function renderAlertPhotos() {
+  const box = document.getElementById('a_photoBox');
+  if (!box) return;
+  box.innerHTML = alertPhotos.map((p, i) =>
+    `<div class="photo-item"><img src="${p}" alt="รูปที่ ${i + 1}" onclick="openPhoto(${i})">
+       <button type="button" title="ลบรูปนี้" onclick="removeAlertPhoto(${i})">✕</button></div>`).join('') +
+    (alertPhotos.length ? `<div class="photo-note" style="align-self:center">แนบแล้ว ${alertPhotos.length}/${MAX_PHOTOS} รูป</div>` : '');
+}
+function removeAlertPhoto(i) { alertPhotos.splice(i, 1); renderAlertPhotos(); }
+function openPhoto(i) { showPhoto(alertPhotos[i]); }
+function showPhoto(dataUrl, backId) {
+  if (!dataUrl) return;
+  const back = backId ? `viewAlert('${backId}')` : 'closeModal()';
+  document.getElementById('modalHost').innerHTML = `
+    <div class="modal-back" onclick="${back}">
+      <div class="modal" style="max-width:min(960px,96vw);padding:10px;background:#111">
+        <img src="${dataUrl}" style="width:100%;height:auto;display:block;border-radius:8px">
+        <div style="text-align:center;padding:8px"><button class="btn small secondary" onclick="${back}">✕ ปิด / Close</button></div>
+      </div>
+    </div>`;
+}
+function photosOf(a) {
+  const p = a && a.photos;
+  if (!p) return [];
+  return (Array.isArray(p) ? p : Object.values(p)).filter(x => typeof x === 'string' && x.indexOf('data:image') === 0);
+}
+function photoGridHtml(a) {
+  const ph = photosOf(a);
+  if (!ph.length) return '';
+  return `<div class="section-title" style="margin-top:16px">📷 รูปภาพแนบ (${ph.length})</div>
+    <div class="photo-grid">${ph.map((p, i) =>
+      `<div class="photo-item"><img src="${p}" alt="รูปที่ ${i + 1}" onclick="showPhotoOf('${a.id}',${i})"></div>`).join('')}</div>`;
+}
+function showPhotoOf(id, i) {
+  const a = db.alerts.find(x => x.id === id);
+  if (a) showPhoto(photosOf(a)[i], id);
 }
 
 /* ---------- ฟอร์มแจ้งเหตุ ---------- */
@@ -2742,6 +2863,8 @@ function resetAlertForm() {
   document.getElementById('a_onsetDate').value = todayISO();
   document.getElementById('a_submitBtn').textContent = '🚨 ส่งแจ้งทีมสัตวแพทย์';
   document.getElementById('a_cancelBtn').classList.add('hidden');
+  alertPhotos = [];
+  renderAlertPhotos();
   onPickAlertType(); onPickUrgency();
   fillAlertReporter();
 }
@@ -2773,6 +2896,7 @@ async function saveAlert(ev) {
     type, urgency,
     category: type === 'emergency' ? category : '',
     signs: [...document.querySelectorAll('.aSign:checked')].map(c => c.value),
+    photos: alertPhotos.slice(0, MAX_PHOTOS),
     projectId: p ? p.id : '', projectNo: p ? p.projectNo : '', projectName: p ? p.projectName : '', piName: p ? p.piName : '',
     location: document.getElementById('a_location').value.trim(),
     species:  document.getElementById('a_species').value.trim(),
@@ -2966,6 +3090,7 @@ function viewAlert(id) {
           <button class="btn small secondary" onclick="closeModal()">✕ ปิด</button></div>
         <div class="card-body">
           <table>${rows.map(([k, v]) => `<tr><th style="width:36%">${esc(k)}</th><td>${esc(v).replace(/\n/g, '<br>')}</td></tr>`).join('')}</table>
+          ${photoGridHtml(a)}
           ${hist ? `<div class="section-title" style="margin-top:16px">ลำดับเหตุการณ์</div><div class="timeline">${hist}</div>` : ''}
           ${needReport ? `<div class="note-box">📝 ผลการดูแลคือ <b>${esc(a.outcome)}</b> — ผู้วิจัยต้องบันทึกรายงานการปฏิบัติต่อสัตว์ทดลองด้วย</div>` : ''}
           <div class="form-actions">
@@ -2996,6 +3121,8 @@ function editAlert(id) {
   set('a_request', a.request); set('a_detail', a.detail); set('a_firstAid', a.firstAid);
   set('a_reporter', a.reporter); set('a_phone', a.phone); set('a_email', a.email);
   document.querySelectorAll('.aSign').forEach(c => { c.checked = (a.signs || []).includes(c.value); });
+  alertPhotos = photosOf(a).slice();
+  renderAlertPhotos();
   document.getElementById('a_submitBtn').textContent = '💾 บันทึกการแก้ไข';
   document.getElementById('a_cancelBtn').classList.remove('hidden');
   toast('กำลังแก้ไขเรื่อง ' + a.docNo);
@@ -3037,7 +3164,7 @@ function openAlertStatus(id) {
           </div>
           <div id="as_outWrap" class="${next === 'closed' ? '' : 'hidden'}" style="margin-top:12px">
             <label class="field">ผลการดูแล
-              <select id="as_outcome"><option value="">— เลือก —</option>
+              <select id="as_outcome"><option value="">— เลือก / Select —</option>
                 ${ALERT_OUTCOMES.map(o => `<option ${o === a.outcome ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
             </label>
           </div>
@@ -3140,6 +3267,7 @@ function printAlert(id) {
     ['ผลการดูแล', a.outcome], ['บันทึกของสัตวแพทย์', a.vetNote]
   ]).filter(([, v]) => v).map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v).replace(/\n/g, '<br>')}</td></tr>`).join('');
   const hist = (a.history || []).map(h => `<tr><td>${fmtStamp(h.at)}</td><td>${esc((ALERT_STATUS[h.status] || {}).t || '')}</td><td>${esc(h.by || '')}</td><td>${esc(h.note || '')}</td></tr>`).join('');
+  const pics = photosOf(a).map(p => `<img src="${p}" style="width:46%;margin:2% 1% 0;border:1px solid #999">`).join('');
   const w = window.open('', '_blank');
   if (!w) { alert('เบราว์เซอร์บล็อกการเปิดหน้าต่างใหม่ — กรุณาอนุญาต pop-up สำหรับเว็บนี้'); return; }
   w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>บันทึกการแจ้ง ${esc(a.docNo)}</title>
@@ -3159,6 +3287,7 @@ function printAlert(id) {
 <h2>Veterinary Alert Record — ศูนย์สัตว์ทดลอง มหาวิทยาลัยสงขลานครินทร์ (PSU:LASC)</h2>
 <table>${rows}</table>
 ${hist ? `<table><tr><th style="width:22%">เวลา</th><th style="width:20%">สถานะ</th><th style="width:20%">ผู้บันทึก</th><th>หมายเหตุ</th></tr>${hist}</table>` : ''}
+${pics ? `<div style="margin-top:6px"><b>รูปภาพแนบ (Attached photos)</b><div>${pics}</div></div>` : ''}
 <div class="sign">
   <div><div class="line">(${esc(a.reporter || '.....................................')})</div>ผู้แจ้ง</div>
   <div><div class="line">(${esc(a.vetName || '.....................................')})</div>สัตวแพทย์ผู้รับผิดชอบ</div>
@@ -3173,11 +3302,12 @@ function exportAlertsCSV() {
   if (!list.length) { alert('ไม่มีเรื่องแจ้งที่ตรงกับเงื่อนไขให้ส่งออก'); return; }
   const head = ['เลขที่การแจ้ง', 'แจ้งเมื่อ', 'ประเภท', 'ความเร่งด่วน', 'ลักษณะเหตุฉุกเฉิน', 'เลขที่โครงการ', 'สถานที่', 'กรง/รหัสสัตว์',
     'ชนิดสัตว์', 'เพศ', 'สายพันธุ์', 'จำนวน (ตัว)', 'อาการที่พบ', 'วันที่เริ่มพบ', 'รายละเอียด', 'การดำเนินการเบื้องต้น',
-    'สิ่งที่ต้องการ', 'ผู้แจ้ง', 'เบอร์โทร', 'อีเมล', 'สถานะ', 'สัตวแพทย์ผู้รับผิดชอบ', 'รับเรื่องเมื่อ', 'ปิดเรื่องเมื่อ', 'ผลการดูแล', 'บันทึกสัตวแพทย์'];
+    'สิ่งที่ต้องการ', 'ผู้แจ้ง', 'เบอร์โทร', 'อีเมล', 'สถานะ', 'สัตวแพทย์ผู้รับผิดชอบ', 'รับเรื่องเมื่อ', 'ปิดเรื่องเมื่อ', 'ผลการดูแล', 'บันทึกสัตวแพทย์', 'จำนวนรูปแนบ'];
   const rows = list.map(a => [a.docNo, fmtStamp(a.createdAt), (ALERT_TYPES[a.type] || {}).th, (URGENCY[a.urgency] || {}).t, a.category,
     a.projectNo, a.location, a.cage, a.species, a.sex, a.strain, a.qty, (a.signs || []).join(', '), a.onsetDate, a.detail, a.firstAid,
     a.request, a.reporter, a.phone, a.email, (ALERT_STATUS[a.status] || {}).t, a.vetName, a.ackAt ? fmtStamp(a.ackAt) : '',
-    a.closedAt ? fmtStamp(a.closedAt) : '', a.outcome, a.vetNote].map(csvCell).join(','));
+    a.closedAt ? fmtStamp(a.closedAt) : '', a.outcome, a.vetNote,
+    photosOf(a).length || a.photoCount || 0].map(csvCell).join(','));
   downloadBlob('﻿' + [head.map(csvCell).join(','), ...rows].join('\r\n'), `lasc-vet-alerts-${todayISO()}.csv`, 'text/csv;charset=utf-8');
   toast(`ส่งออก ${list.length} เรื่องเป็นไฟล์ CSV แล้ว`);
 }
@@ -3608,6 +3738,7 @@ function applyCloudReports(val, flat) {
 }
 function normAlert(a) {
   if (!a) return a;
+  if (a.photos && !Array.isArray(a.photos)) a.photos = Object.values(a.photos);
   if (!Array.isArray(a.signs)) a.signs = a.signs ? Object.values(a.signs) : [];
   if (a.history && !Array.isArray(a.history)) a.history = Object.values(a.history);
   return a;
