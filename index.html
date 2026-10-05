@@ -906,7 +906,7 @@
         <div id="memberStats" style="margin-top:14px"></div>
         <div class="table-wrap" style="margin-top:10px" id="memberTable"></div>
         <div class="hint" style="margin-top:8px">นักวิจัยลงทะเบียนเองจากปุ่ม「🔑 เข้าสู่ระบบ」→「📝 ลงทะเบียน」— อนุมัติแล้วรายงานที่เขาบันทึกไว้ในเครื่องจะส่งขึ้นระบบกลางอัตโนมัติ
-          และถ้าต่อ n8n ไว้ ระบบจะแจ้งผลการอนุมัติทางอีเมลให้</div>
+          และถ้าต่อตัวกลางแจ้งเตือนไว้ ระบบจะแจ้งผลการอนุมัติทางอีเมลให้</div>
       </div>
     </div>
 
@@ -964,13 +964,13 @@
     </div>
 
     <div class="card" id="vetSettingsCard">
-      <div class="card-head"><h2>⚙️ ตั้งค่าการแจ้งเตือน (n8n) และเบอร์โทรฉุกเฉิน</h2></div>
+      <div class="card-head"><h2>⚙️ ตั้งค่าการแจ้งเตือน (LINE + อีเมล) และเบอร์โทรฉุกเฉิน</h2></div>
       <div class="card-body">
         <div class="grid grid-2">
-          <label class="field">n8n Webhook URL (workflow แจ้งเหตุ)
-            <input type="url" id="vs_hookUrl" placeholder="https://n8n.your-domain.ac.th/webhook/lasc-vet-alert">
+          <label class="field">Webhook URL ของตัวกลางแจ้งเตือน (Google Apps Script หรือ n8n)
+            <input type="url" id="vs_hookUrl" placeholder="https://script.google.com/macros/s/.../exec">
           </label>
-          <label class="field">รหัสเชื่อมต่อ (ต้องตรงกับ LASC_ALERT_KEY บน n8n)
+          <label class="field">รหัสเชื่อมต่อ (ต้องตรงกับ ALERT_KEY ในสคริปต์)
             <input type="text" id="vs_hookKey" placeholder="เช่น lasc-alert-2569">
           </label>
         </div>
@@ -979,7 +979,7 @@
           <label class="field">เบอร์โทรฉุกเฉิน (บรรทัดละ 1 เบอร์ รูปแบบ ชื่อ | เบอร์)
             <textarea id="vs_phones" style="min-height:60px" placeholder="สัตวแพทย์เวร | 08x-xxx-xxxx&#10;ห้องควบคุมอาคาร | 074-xxx-xxx"></textarea>
           </label>
-          <label class="field">อีเมลสำรอง (ใช้ร่างอีเมลเมื่อ n8n ไม่ตอบสนอง — คั่นด้วย , )
+          <label class="field">อีเมลสำรอง (ใช้ร่างอีเมลเมื่อระบบแจ้งเตือนขัดข้อง — คั่นด้วย , )
             <input type="text" id="vs_emails" placeholder="vet1@psu.ac.th, vet2@psu.ac.th">
           </label>
         </div>
@@ -988,9 +988,11 @@
           <button type="button" class="btn secondary" onclick="testNotifyAll()">🔔 ทดสอบส่งถึงผู้รับแจ้งทุกคน</button>
         </div>
         <div class="note-box">
-          ℹ️ นำเข้า workflow <code>n8n-vet-alert-workflow.json</code> และ <code>n8n-line-register-workflow.json</code>
-          ตามคู่มือ <code>n8n-vet-alert-setup.md</code> — ระบบส่งเฉพาะเลขอ้างอิงของเรื่องไปให้ n8n
-          แล้ว n8n อ่านรายละเอียดจริงและรายชื่อผู้รับแจ้งจาก Firebase เอง จึงปลอมข้อความแจ้งเตือนไม่ได้<br>
+          ℹ️ ตัวกลางแจ้งเตือนมี 2 แบบให้เลือก: <b>Google Apps Script</b> (ฟรี ไม่ต้องมีเซิร์ฟเวอร์ — ใช้ไฟล์
+          <code>apps-script-vet-alert.gs</code> ตามคู่มือ <code>apps-script-setup.md</code>) หรือ <b>n8n</b>
+          (ใช้ไฟล์ <code>n8n-vet-alert-workflow.json</code> · <code>n8n-line-register-workflow.json</code>) —
+          ระบบส่งเฉพาะเลขอ้างอิงของเรื่องไปให้ตัวกลาง แล้วตัวกลางอ่านรายละเอียดจริงและรายชื่อผู้รับแจ้งจาก Firebase เอง
+          จึงปลอมข้อความแจ้งเตือนไม่ได้<br>
           ค่าเหล่านี้บันทึกขึ้นคลาวด์ให้ทุกเครื่องใช้ร่วมกัน และหน้าจอเจ้าหน้าที่ที่เปิดแอปไว้จะเด้งแจ้งเตือนพร้อมเสียงเมื่อมีเรื่องใหม่
         </div>
       </div>
@@ -1211,6 +1213,7 @@
         <div class="card-head">
           <h2>🗂 ทะเบียนโครงการในระบบ</h2>
           <div class="toolbar-right">
+            <button class="btn small" onclick="syncProjectsFromMonitor()">🔄 ดึงโครงการจากระบบตรวจติดตามฯ</button>
             <button class="btn small secondary" onclick="exportProjects()">⬇ ส่งออกทะเบียนโครงการ (JSON)</button>
           </div>
         </div>
@@ -1298,7 +1301,7 @@
 'use strict';
 
 /* ==================== ค่าคงที่ / ข้อมูลอ้างอิง ==================== */
-const APP_VERSION = '1.5.0 (18 ก.ย. 2569)';
+const APP_VERSION = '1.6.0 (5 ต.ค. 2569)';
 const STORE_KEY = 'lascAnimalReportData_v1';
 const ROLE_KEY  = 'lascAnimalReportRole';
 const PIN_KEY   = 'lascAnimalReportAdminPin';
@@ -2600,7 +2603,7 @@ function saveVetSettings() {
   VET.phones  = document.getElementById('vs_phones').value.trim();
   VET.hookUrl = document.getElementById('vs_hookUrl').value.trim();
   VET.hookKey = document.getElementById('vs_hookKey').value.trim();
-  if (VET.hookUrl && !/^https:\/\//.test(VET.hookUrl)) { alert('n8n Webhook URL ต้องขึ้นต้นด้วย https://'); return; }
+  if (VET.hookUrl && !/^https:\/\//.test(VET.hookUrl)) { alert('Webhook URL ต้องขึ้นต้นด้วย https://'); return; }
   persistVetSettings();
   renderVetContacts();
   if (cloudReady() && isStaff) {
@@ -2611,10 +2614,10 @@ function saveVetSettings() {
   }
 }
 async function testNotifyAll() {
-  if (!VET.hookUrl) { alert('กรุณาใส่ n8n Webhook URL แล้วกดบันทึกก่อน'); return; }
+  if (!VET.hookUrl) { alert('กรุณาใส่ Webhook URL ของตัวกลางแจ้งเตือน แล้วกดบันทึกก่อน'); return; }
   toast('กำลังส่งข้อความทดสอบถึงผู้รับแจ้งทุกคน…');
   const res = await postNotify({ event: 'test' });
-  alert(res.ok ? `✅ n8n ส่งข้อความทดสอบแล้ว — LINE ${res.line || 0} · อีเมล ${res.email || 0}` + (res.skipped ? '\n(' + res.skipped + ')' : '')
+  alert(res.ok ? `✅ ส่งข้อความทดสอบแล้ว — LINE ${res.line || 0} · อีเมล ${res.email || 0}` + (res.skipped ? '\n(' + res.skipped + ')' : '')
                : '❌ ส่งไม่สำเร็จ: ' + res.error);
 }
 
@@ -2622,7 +2625,7 @@ async function testNotifyAll() {
    ส่งเฉพาะ "เลขอ้างอิง" (uid / id) — n8n จะอ่านข้อมูลจริงจาก Firebase เอง จึงปลอมข้อความแจ้งเตือนไม่ได้
    ใช้ form-urlencoded เพื่อไม่ให้เบราว์เซอร์ต้องทำ CORS preflight */
 async function postNotify(data) {
-  if (!VET.hookUrl) return { ok: false, error: 'ยังไม่ได้ตั้งค่า n8n Webhook URL' };
+  if (!VET.hookUrl) return { ok: false, error: 'ยังไม่ได้ตั้งค่า Webhook URL ของตัวกลางแจ้งเตือน' };
   try {
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = ctl ? setTimeout(() => ctl.abort(), 20000) : null;
@@ -2635,7 +2638,7 @@ async function postNotify(data) {
     const j = await res.json().catch(() => ({ ok: res.ok }));
     return j && j.ok ? Object.assign({}, j, { ok: true }) : { ok: false, error: (j && j.error) || ('HTTP ' + res.status) };
   } catch (e) {
-    return { ok: false, error: e.name === 'AbortError' ? 'หมดเวลารอการตอบกลับจาก n8n' : e.message };
+    return { ok: false, error: e.name === 'AbortError' ? 'หมดเวลารอการตอบกลับจากตัวกลางแจ้งเตือน' : e.message };
   }
 }
 function alertRows(a) {
@@ -2950,7 +2953,7 @@ function viewAlert(id) {
     ['สัตวแพทย์ผู้รับผิดชอบ', a.vetName],
     ['ผลการดูแล', a.outcome],
     ['บันทึกของสัตวแพทย์', a.vetNote],
-    ['แจ้งทีมสัตวแพทย์ทาง', a.notified ? (a.notified.via === 'n8n' ? `n8n — LINE ${a.notified.line || 0} · อีเมล ${a.notified.email || 0}` : 'ร่างอีเมล / โทรศัพท์') : ''],
+    ['แจ้งทีมสัตวแพทย์ทาง', a.notified ? (a.notified.via === 'n8n' ? `อัตโนมัติ — LINE ${a.notified.line || 0} · อีเมล ${a.notified.email || 0}` : 'ร่างอีเมล / โทรศัพท์') : ''],
     ['ช่องทางที่แจ้ง', a.guest ? 'ผู้แจ้งทั่วไป (ยังไม่ได้เป็นสมาชิกที่อนุมัติ)' : '']
   ]).filter(([, v]) => v);
   const hist = (a.history || []).slice().reverse().map(h =>
@@ -3081,7 +3084,7 @@ async function saveAlertStatus(id) {
   /* n8n: แจ้งความคืบหน้าในทีมสัตวแพทย์ทาง LINE และแจ้งผลถึงผู้แจ้งทางอีเมล */
   if (inCloud && VET.hookUrl) {
     const res = await postNotify({ event: 'status', id: a.id, uid: a.guest ? '' : (a.uid || ''), guest: !!a.guest, mail: !!(wantMail && a.email) });
-    toast(res.ok ? `แจ้งความคืบหน้าแล้ว — LINE ${res.line || 0} · อีเมล ${res.email || 0}` : 'แจ้งเตือนผ่าน n8n ไม่สำเร็จ: ' + res.error);
+    toast(res.ok ? `แจ้งความคืบหน้าแล้ว — LINE ${res.line || 0} · อีเมล ${res.email || 0}` : 'แจ้งเตือนอัตโนมัติไม่สำเร็จ: ' + res.error);
     if (res.ok || !wantMail || !a.email) return;
   }
   if (wantMail && a.email) {
@@ -3239,6 +3242,22 @@ function downloadBlob(content, filename, type) {
 function exportData() {
   downloadBlob(JSON.stringify(db, null, 2), `lasc-animal-report-backup-${todayISO()}.json`, 'application/json');
   toast('สำรองข้อมูลเป็นไฟล์ JSON แล้ว');
+}
+/* ดึงทะเบียนโครงการจาก「ระบบตรวจติดตามการดำเนินการต่อสัตว์ฯ」ผ่านตัวกลางแจ้งเตือน
+   (ตัวกลางอ่านจากฐานข้อมูลของระบบนั้นด้วยสิทธิ์ของตัวเอง แล้วเขียนลงทะเบียนโครงการให้) */
+async function syncProjectsFromMonitor() {
+  if (!isStaff) { alert('ต้องเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่ก่อน'); return; }
+  if (!VET.hookUrl) { alert('ยังไม่ได้ตั้งค่า Webhook URL ของตัวกลางแจ้งเตือน (แท็บ「👥 สมาชิก / สัตวแพทย์」)'); return; }
+  if (!confirm('ดึงทะเบียนโครงการจากระบบตรวจติดตามการดำเนินการต่อสัตว์ฯ ?\n\n' +
+               '• โครงการใหม่จะถูกเพิ่มเข้าทะเบียน\n' +
+               '• โครงการที่มีอยู่แล้วจะเติมเฉพาะช่องที่ยังว่าง ไม่ทับข้อมูลที่แก้ไว้\n' +
+               '• ไม่มีการลบโครงการใด ๆ')) return;
+  toast('กำลังดึงทะเบียนโครงการ…');
+  const res = await postNotify({ event: 'syncProjects' });
+  if (!res.ok) { alert('ดึงข้อมูลไม่สำเร็จ: ' + res.error); return; }
+  alert(res.skipped
+    ? 'ℹ️ ' + res.skipped
+    : `✅ ดึงทะเบียนโครงการเรียบร้อย\n\nต้นทางมี ${res.total || 0} โครงการ\nเพิ่มใหม่ ${res.added || 0} โครงการ\nเติมข้อมูลเพิ่ม ${res.updated || 0} โครงการ`);
 }
 function exportProjects() {
   downloadBlob(JSON.stringify({ projects: db.projects }, null, 2), `lasc-projects-${todayISO()}.json`, 'application/json');
