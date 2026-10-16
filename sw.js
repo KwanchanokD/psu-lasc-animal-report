@@ -1,7 +1,7 @@
 /* Service Worker — ระบบรายงานการปฏิบัติต่อสัตว์ทดลองของนักวิจัย PSU:LASC
    - HTML ดึงจากเครือข่ายเสมอ (bypass HTTP cache) เพื่อให้ได้เวอร์ชันล่าสุดทันทีที่อัปโหลดไฟล์ใหม่
    - ไฟล์อื่นใช้ network-first แล้ว fallback เป็น cache เมื่อออฟไลน์ */
-const CACHE = 'psu-lasc-animal-report-v12';
+const CACHE = 'psu-lasc-animal-report-v13';
 const ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const ASSETS = [
   './วิธีใช้งาน.html',
   './คู่มือนักวิจัย.html',
   './guide.html',
+  './guide-en.html',
   './screenshot-wide.png',
   './screenshot-narrow.png',
   './วิธีติดตั้งแอป.html'
