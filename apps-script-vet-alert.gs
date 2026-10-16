@@ -522,3 +522,79 @@ function setupTest() {
   MailApp.sendEmail({ to: me, subject: '[ทดสอบ] ตัวกลางแจ้งเหตุ PSU:LASC', htmlBody: wrapHtml('สคริปต์ทำงานได้ตามปกติ', ''), name: cfg('SENDER_NAME') });
   Logger.log('✅ ส่งอีเมลทดสอบไปที่ ' + me + ' แล้ว (เหลือโควตาวันนี้ ' + MailApp.getRemainingDailyQuota() + ' ฉบับ)');
 }
+
+/* =========================================================================
+ *  ตั้งค่าความลับลง Script Properties
+ *  ไฟล์นี้อ่านค่าผ่าน cfg() ซึ่งดู Script Properties ก่อน แล้วค่อย fallback ไปที่ CONFIG
+ *  การเก็บไว้ใน Script Properties ดีกว่าใส่ใน CONFIG เพราะ
+ *    - ไม่ติดไปกับโค้ดเวลาคัดลอกหรือแชร์ไฟล์
+ *    - เปลี่ยนค่าแล้ว "ไม่ต้อง Deploy เวอร์ชันใหม่"
+ * ====================================================================== */
+
+/* เปลี่ยนเฉพาะโทเคน LINE เช่นหลังกด Reissue ที่ LINE Developers Console */
+function เปลี่ยนโทเคนLINE() {
+  var TOKEN = 'วาง_CHANNEL_ACCESS_TOKEN_ใหม่ที่นี่';
+
+  if (TOKEN.indexOf('วาง_') === 0) {
+    throw new Error('ยังไม่ได้วาง token ใหม่ — แก้ค่า TOKEN ในฟังก์ชันนี้ก่อนแล้วรันใหม่');
+  }
+  PropertiesService.getScriptProperties().setProperty('LINE_TOKEN', TOKEN);
+  Logger.log('เปลี่ยนโทเคน LINE เรียบร้อยแล้ว (' + TOKEN.length + ' ตัวอักษร)');
+  Logger.log('ตรวจสอบ: cfg(LINE_TOKEN) ยาว ' + cfg('LINE_TOKEN').length + ' ตัวอักษร');
+}
+
+/* ดูว่าตอนนี้ค่าไหนมาจาก Script Properties และค่าไหนยัง fallback ไป CONFIG */
+function ตรวจสอบการตั้งค่า() {
+  var keys = ['FB_DB_SECRET', 'ALERT_KEY', 'LINE_TOKEN', 'SRC_DB_SECRET'];
+  var sp = PropertiesService.getScriptProperties();
+  keys.forEach(function (k) {
+    var fromProp = sp.getProperty(k) || '';
+    var val = cfg(k);
+    Logger.log(k + ' : ' + (val ? 'ตั้งค่าแล้ว (' + val.length + ' ตัวอักษร)' : 'ยังว่าง') +
+               ' · แหล่งที่มา = ' + (fromProp ? 'Script Properties' : (val ? 'CONFIG ในโค้ด' : '-')));
+  });
+}
+
+/* =========================================================================
+ *  ย้ายความลับไปเก็บใน Script Properties ครั้งเดียวจบ
+ *
+ *  ทำไมควรย้าย: ค่าที่อยู่ใน CONFIG เป็น "โค้ด" จึงปรากฏบนจอทุกครั้งที่เปิดไฟล์
+ *  เสี่ยงหลุดเวลาแชร์หน้าจอ ถ่ายภาพ หรือให้คนอื่นช่วยดูโค้ด
+ *  ส่วน Script Properties อยู่ฝั่งเซิร์ฟเวอร์ ไม่แสดงในหน้าแก้ไขโค้ด
+ *
+ *  วิธีใช้
+ *    1. วางค่าจริงในช่องที่ต้องการ แล้ว Save → เลือกฟังก์ชันนี้ → Run
+ *    2. รัน ตรวจสอบการตั้งค่า() ยืนยันว่าแหล่งที่มาเป็น Script Properties
+ *    3. กลับมาลบค่าจริงออกจากฟังก์ชันนี้ และล้างค่าใน CONFIG ให้เป็น ''
+ *       แล้ว Save อีกครั้ง — ความลับจะไม่ปรากฏในโค้ดอีกเลย
+ *    ไม่ต้อง Deploy ใหม่ เพราะไม่ได้แก้โครงสร้างการทำงาน
+ * ====================================================================== */
+function ตั้งค่าความลับ() {
+  var values = {
+    FB_DB_SECRET:  '',   // Database secret ของ psu-lasc-animal-report
+    ALERT_KEY:     '',   // รหัสเชื่อมต่อ ต้องตรงกับช่องในหน้าเว็บ
+    LINE_TOKEN:    '',   // Channel access token (long-lived)
+    SRC_DB_SECRET: ''    // Database secret ของ psu-lasc-animal (เว้นว่าง = ปิดการซิงก์)
+  };
+
+  var sp = PropertiesService.getScriptProperties();
+  var saved = 0;
+  Object.keys(values).forEach(function (k) {
+    if (values[k]) { sp.setProperty(k, values[k]); saved++; }
+  });
+
+  if (!saved) {
+    throw new Error('ยังไม่ได้ใส่ค่าใด ๆ — กรอกอย่างน้อยหนึ่งช่องในฟังก์ชันนี้ก่อนแล้วรันใหม่');
+  }
+  Logger.log('บันทึกลง Script Properties แล้ว ' + saved + ' ค่า');
+  Logger.log('ขั้นต่อไป: รัน ตรวจสอบการตั้งค่า() แล้วลบค่าจริงออกจากฟังก์ชันนี้และ CONFIG');
+}
+
+/* ลบความลับออกจาก Script Properties (เช่น ตอนเลิกใช้หรือส่งมอบโปรเจกต์) */
+function ล้างความลับ() {
+  var sp = PropertiesService.getScriptProperties();
+  ['FB_DB_SECRET', 'ALERT_KEY', 'LINE_TOKEN', 'SRC_DB_SECRET'].forEach(function (k) {
+    sp.deleteProperty(k);
+  });
+  Logger.log('ล้างความลับออกจาก Script Properties แล้ว');
+}

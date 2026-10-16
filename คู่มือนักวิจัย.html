@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คู่มือสำหรับนักวิจัย — ระบบรายงานการปฏิบัติต่อสัตว์ทดลอง PSU:LASC</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --primary:#1a5c9e; --primary-dark:#124a82; --primary-light:#e8f1fa; --accent:#0e7c66;
+          --warning:#b9770e; --warning-light:#fdf3e2; --danger:#c0392b; --danger-light:#fdecea;
+          --ok:#1f8a4c; --ok-light:#e8f6ee; --border:#dfe6ee; --text:#2c3e50; --muted:#7f8c8d; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Sarabun','Leelawadee UI',Tahoma,sans-serif; background:#f4f6f9; color:var(--text);
+         font-size:15.5px; line-height:1.75; }
+  header { background:linear-gradient(135deg,var(--primary-dark),var(--primary)); color:#fff;
+           padding:26px 22px; text-align:center; border-bottom:3px solid var(--accent); }
+  header img { width:74px; height:74px; object-fit:contain; background:#fff; border-radius:50%; padding:6px; }
+  header h1 { font-size:21px; font-weight:600; margin-top:10px; }
+  header p { font-size:13.5px; opacity:.9; }
+  header .site { display:inline-block; margin-top:10px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.45);
+                 padding:6px 14px; border-radius:20px; font-size:13.5px; }
+  header .site a { color:#fff; }
+  .wrap { max-width:880px; margin:0 auto; padding:22px 16px 60px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:11px; margin-bottom:18px; overflow:hidden; }
+  .card h2 { background:var(--primary-light); color:var(--primary-dark); font-size:16px; font-weight:600;
+             padding:12px 18px; border-bottom:1px solid var(--border); }
+  .card h2 .en { color:var(--primary); font-weight:400; font-size:13px; }
+  .card .body { padding:16px 20px; }
+  h3 { font-size:15px; color:var(--primary-dark); margin:16px 0 6px; border-left:4px solid var(--primary); padding-left:9px; }
+  h3:first-child { margin-top:0; }
+  ol, ul { margin:6px 0 6px 22px; }
+  li { margin-bottom:5px; }
+  .note { border-left:4px solid; border-radius:8px; padding:11px 14px; margin:12px 0; font-size:14.5px; }
+  .note.info { background:var(--primary-light); border-color:var(--primary); }
+  .note.warn { background:var(--warning-light); border-color:var(--warning); }
+  .note.ok   { background:var(--ok-light);      border-color:var(--ok); }
+  .note.bad  { background:var(--danger-light);  border-color:var(--danger); }
+  table { width:100%; border-collapse:collapse; font-size:14.2px; margin:10px 0; }
+  th, td { border:1px solid var(--border); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#f7f9fc; color:var(--primary-dark); font-weight:600; }
+  .pill { display:inline-block; padding:1px 10px; border-radius:999px; font-size:12.5px; font-weight:600; white-space:nowrap; }
+  .pill.warn { background:var(--warning-light); color:var(--warning); }
+  .pill.ok   { background:var(--ok-light); color:var(--ok); }
+  .pill.bad  { background:var(--danger-light); color:var(--danger); }
+  .pill.blue { background:var(--primary-light); color:var(--primary-dark); }
+  .pill.mute { background:#eef2f6; color:var(--muted); }
+  code { background:#eef2f6; padding:1px 6px; border-radius:5px; font-size:13.5px; }
+  .steps { counter-reset:s; list-style:none; margin-left:0; }
+  .steps li { counter-increment:s; position:relative; padding-left:34px; margin-bottom:11px; }
+  .steps li::before { content:counter(s); position:absolute; left:0; top:2px; width:24px; height:24px;
+    background:var(--primary); color:#fff; border-radius:50%; text-align:center; line-height:24px;
+    font-size:13px; font-weight:600; }
+  .steps.red li::before { background:var(--danger); }
+  .toc { display:flex; flex-wrap:wrap; gap:8px; }
+  .toc a { display:inline-block; background:var(--primary-light); color:var(--primary-dark); text-decoration:none;
+           padding:5px 12px; border-radius:999px; font-size:13.5px; font-weight:500; }
+  .toc a:hover { background:var(--primary); color:#fff; }
+  .en { color:var(--muted); font-weight:400; font-size:13px; }
+  .check { list-style:none; margin-left:0; }
+  .check li { padding-left:28px; position:relative; }
+  .check li::before { content:'☐'; position:absolute; left:4px; font-size:17px; color:var(--primary); }
+  footer { text-align:center; font-size:13px; color:var(--muted); padding:10px 16px 34px; }
+  a { color:var(--primary); }
+  .btn-print { display:inline-block; background:var(--primary); color:#fff; text-decoration:none;
+               padding:7px 16px; border-radius:8px; font-size:14px; border:none; cursor:pointer; font-family:inherit; }
+  @page { size: A4; margin: 12mm 12mm 14mm; }
+  @media print {
+    .wrap { max-width:none; padding:0; }
+    header { background:#fff; color:#000; border-bottom:2px solid #000; padding:10px 0 12px; }
+    header img { width:54px; height:54px; }
+    header h1 { font-size:18px; }
+    h3 { break-after:avoid; }
+    table, .note, ol.steps li { break-inside:avoid; }
+    header .site { background:none; border:1px solid #999; }
+    header .site a, header h1, header p { color:#000; }
+    body { background:#fff; font-size:13.2px; }
+    .toc, .btn-print, .no-print { display:none; }
+    .card { break-inside:avoid; border:1px solid #bbb; }
+    .card h2 { background:#eef3f8; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <img src="icon-192.png" alt="LASC">
+  <h1>คู่มือสำหรับนักวิจัย <span style="font-weight:400;font-size:16px">Researcher's Guide</span></h1>
+  <p>ระบบรายงานการปฏิบัติต่อสัตว์ทดลองของนักวิจัย · ศูนย์สัตว์ทดลอง มหาวิทยาลัยสงขลานครินทร์ (PSU:LASC)</p>
+  <div class="site">เปิดระบบที่ <a href="https://kwanchanokd.github.io/psu-lasc-animal-report/">kwanchanokd.github.io/psu-lasc-animal-report</a></div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>สารบัญ <span class="en">Contents</span></h2>
+    <div class="body">
+      <div class="toc">
+        <a href="#what">ระบบนี้ใช้ทำอะไร</a>
+        <a href="#start">เริ่มต้น: ลงทะเบียน</a>
+        <a href="#report">รายงานการปฏิบัติต่อสัตว์</a>
+        <a href="#alert">🚨 แจ้งเหตุฉุกเฉิน / สัตว์ป่วย</a>
+        <a href="#history">ดู แก้ไข พิมพ์ PDF</a>
+        <a href="#install">ติดตั้งเป็นแอปบนมือถือ</a>
+        <a href="#faq">คำถามที่พบบ่อย</a>
+        <a href="#checklist">เช็กลิสต์ก่อนกดส่ง</a>
+      </div>
+      <div style="margin-top:12px" class="no-print">
+        <button class="btn-print" onclick="window.print()">🖨 พิมพ์คู่มือนี้ / Print</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="what">
+    <h2>1. ระบบนี้ใช้ทำอะไร <span class="en">What this system is for</span></h2>
+    <div class="body">
+      <p>ระบบนี้ให้นักวิจัย <b>รายงานการปฏิบัติต่อสัตว์ทดลอง</b> ตามเลขที่โครงการวิจัยที่ได้รับอนุมัติจากคณะกรรมการ
+        จริยธรรมการวิจัยในสัตว์ และ <b>แจ้งเหตุฉุกเฉินหรือปัญหาสุขภาพสัตว์</b> ถึงทีมสัตวแพทย์ได้ทันที</p>
+      <table>
+        <thead><tr><th style="width:34%">สิ่งที่ทำได้</th><th>ใช้เมื่อไร</th></tr></thead>
+        <tbody>
+          <tr><td><b>📝 รายงานใหม่</b><br><span class="en">New report</span></td>
+              <td>เมื่อทำการุณยฆาต · เคลื่อนย้ายสัตว์ออกนอกสถานที่ · หรือสัตว์ตายระหว่างการศึกษา</td></tr>
+          <tr><td><b>🚨 แจ้งเหตุ / สุขภาพสัตว์</b><br><span class="en">Emergency / health alert</span></td>
+              <td>เมื่อพบสัตว์ป่วย บาดเจ็บ หรือเหตุฉุกเฉินในห้องเลี้ยง — ถึงทีมสัตวแพทย์ทาง LINE และอีเมลทันที</td></tr>
+          <tr><td><b>📚 ประวัติการรายงาน</b><br><span class="en">History</span></td>
+              <td>ดู แก้ไข พิมพ์แบบฟอร์ม PDF และส่งออก Excel เพื่อแนบเสนอคณะกรรมการฯ</td></tr>
+          <tr><td><b>📊 สรุปผล</b><br><span class="en">Summary</span></td>
+              <td>ดูจำนวนสัตว์ที่รายงานแล้ว แยกตามรายการ วิธีการ ชนิดสัตว์ และโครงการ</td></tr>
+        </tbody>
+      </table>
+      <div class="note ok"><b>ระบบช่วยคุมจำนวนสัตว์ให้</b> — เมื่อเลือกเลขที่โครงการ ระบบจะแสดงจำนวนที่ได้รับอนุมัติ
+        จำนวนที่รายงานไปแล้ว และคงเหลือ ถ้ารายงานรวมแล้วเกินจำนวนที่อนุมัติ ระบบจะเตือนและติดป้าย
+        <span class="pill bad">เกินจำนวนอนุมัติ</span> ไว้ให้เจ้าหน้าที่ตรวจสอบ</div>
+    </div>
+  </div>
+
+  <div class="card" id="start">
+    <h2>2. เริ่มต้นใช้งาน — ลงทะเบียนครั้งเดียว <span class="en">Register once</span></h2>
+    <div class="body">
+      <ol class="steps">
+        <li>เปิด <a href="https://kwanchanokd.github.io/psu-lasc-animal-report/">kwanchanokd.github.io/psu-lasc-animal-report</a>
+          ด้วยเบราว์เซอร์ (Chrome / Edge / Safari) ได้ทั้งคอมพิวเตอร์และมือถือ</li>
+        <li>กดปุ่ม <b>「🔑 เข้าสู่ระบบ」</b> มุมขวาบน แล้วเลือกแท็บ <b>「📝 ลงทะเบียนนักวิจัย」</b></li>
+        <li>กรอก <b>ชื่อ–สกุล · อีเมล · รหัสผ่าน</b> (อย่างน้อย 6 ตัวอักษร) — หน่วยงานและเบอร์โทรจะกรอกหรือไม่ก็ได้
+          แล้วกด <b>「📝 ลงทะเบียน」</b></li>
+        <li><b>รอเจ้าหน้าที่อนุมัติ</b> ระบบจะแจ้งผลทางอีเมล โดยปกติภายใน 1 วันทำการ</li>
+        <li>เมื่ออนุมัติแล้ว ป้ายมุมขวาบนจะเปลี่ยนเป็น <code>☁ ซิงก์แล้ว</code> และเลือกเลขที่โครงการได้</li>
+      </ol>
+
+      <h3>ระหว่างรออนุมัติทำอะไรได้บ้าง</h3>
+      <table>
+        <thead><tr><th style="width:32%">สถานะบัญชี</th><th>สิ่งที่ทำได้</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill warn">⏳ รออนุมัติ</span></td>
+              <td>บันทึกรายงานได้ (เก็บไว้ในเครื่องก่อน แล้วส่งขึ้นระบบกลางให้อัตโนมัติเมื่ออนุมัติ) ·
+                  <b>แจ้งเหตุฉุกเฉินได้ทันที ไม่ต้องรอ</b> · แต่ยังไม่เห็นรายการเลขที่โครงการ</td></tr>
+          <tr><td><span class="pill ok">✅ อนุมัติแล้ว</span></td>
+              <td>ใช้งานได้ครบ ข้อมูลซิงก์ทุกเครื่องที่เข้าสู่ระบบด้วยบัญชีเดียวกัน · เห็นเฉพาะรายงานของตนเอง</td></tr>
+        </tbody>
+      </table>
+
+      <div class="note warn"><b>ไม่เห็นเลขที่โครงการของท่าน?</b> เลขที่โครงการจะถูกดึงเข้าระบบโดยเจ้าหน้าที่ศูนย์สัตว์ทดลอง
+        จากระบบจริยธรรมการวิจัยในสัตว์ (animalethic.research.psu.ac.th) และ<b>ต้องเข้าสู่ระบบก่อนจึงจะเห็นรายการ</b> —
+        ถ้าเข้าสู่ระบบแล้วยังไม่พบโครงการของท่าน กรุณาติดต่อเจ้าหน้าที่พร้อมแจ้งเลขที่โครงการ</div>
+      <div class="note info"><b>ลืมรหัสผ่าน</b> — กด「🔑 เข้าสู่ระบบ」→ กรอกอีเมล → กด <b>「ลืมรหัสผ่าน」</b>
+        ระบบจะส่งลิงก์ตั้งรหัสใหม่ไปทางอีเมล (ดูในกล่องจดหมายขยะด้วย)</div>
+    </div>
+  </div>
+
+  <div class="card" id="report">
+    <h2>3. รายงานการปฏิบัติต่อสัตว์ทดลอง <span class="en">Reporting a procedure</span></h2>
+    <div class="body">
+      <p>แท็บ <b>「📝 รายงานใหม่」</b> — ทุกช่องมีภาษาอังกฤษกำกับไว้ให้แล้ว</p>
+      <ol class="steps">
+        <li><b>เลือกเลขที่โครงการวิจัย</b> <span class="en">Protocol number</span><br>
+          พิมพ์ในช่องค้นหาเพื่อกรองด้วยเลขที่ ชื่อโครงการ หรือชื่อหัวหน้าโครงการได้ — ระบบจะแสดงข้อมูลโครงการ
+          จำนวนที่อนุมัติ และคงเหลือให้ทันที</li>
+        <li><b>กรอกข้อมูลสัตว์</b> — ชนิดสัตว์ <span class="en">Species</span> · เพศ <span class="en">Sex</span> ·
+          สายพันธุ์ <span class="en">Strain</span> · จำนวน <span class="en">Number of animals</span><br>
+          ระบบเติมค่าจากโครงการให้อัตโนมัติ แก้ไขได้ถ้ารุ่นที่รายงานต่างออกไป</li>
+        <li><b>เลือกรายการที่รายงาน</b> 1 รายการ แล้วกรอกรายละเอียดในกล่องที่เปิดขึ้นมา (ดูตารางด้านล่าง)</li>
+        <li><b>กรอกวันที่ดำเนินการ สถานที่ และชื่อผู้รายงาน</b> แล้วกด <b>「💾 บันทึกรายงาน / Save report」</b></li>
+      </ol>
+
+      <h3>ข้อมูลที่ต้องกรอกในแต่ละรายการ</h3>
+      <table>
+        <thead><tr><th style="width:32%">รายการ</th><th>ข้อมูลเพิ่มเติม (ช่องที่มี * ต้องกรอก)</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>⚖️ การุณยฆาต</b><br><span class="pill bad">Euthanasia</span></td>
+            <td><b>* วิธีการ</b> เลือก 1 จาก 3 วิธี
+              <ul>
+                <li>การฉีดยาสลบเกินขนาด — <i>Overdose anesthetic drug injection</i></li>
+                <li>การสูดดมยาสลบเกินขนาด — <i>Overdose anesthetic drug inhalation</i></li>
+                <li>การสูดดมก๊าซคาร์บอนไดออกไซด์ — <i>Carbondioxide inhalation</i></li>
+              </ul>
+              และ (ไม่บังคับ) ชื่อยา/สารที่ใช้ · ขนาดที่ใช้ · ผู้ดำเนินการ · เหตุผล · การยืนยันการตาย · การจัดการซาก</td>
+          </tr>
+          <tr>
+            <td><b>🚚 เคลื่อนย้ายออกนอกสถานที่</b><br><span class="pill warn">Off-site transport</span></td>
+            <td><b>* สถานที่ปลายทาง</b> · วัตถุประสงค์ · ผู้รับผิดชอบระหว่างขนย้าย · ยานพาหนะ · ระยะเวลาเดินทาง ·
+              แผนการนำสัตว์กลับและวันที่คาดว่าจะกลับ · มาตรการดูแลสวัสดิภาพระหว่างเคลื่อนย้าย</td>
+          </tr>
+          <tr>
+            <td><b>🕊️ สัตว์ตายระหว่างการศึกษา</b><br><span class="pill mute">Died during the study</span></td>
+            <td><b>* วันที่พบสัตว์ตาย</b> · เวลาที่พบ · ผู้พบเหตุ · สาเหตุที่สงสัย · การชันสูตรซาก ·
+              อาการก่อนตาย/ผลชันสูตร · การแจ้งสัตวแพทย์ · การจัดการซาก</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note info">เมื่อบันทึกแล้ว ระบบออกเลขที่รายงานอัตโนมัติรูปแบบ <code>AR-2569-0001</code>
+        และพาไปที่แท็บ「📚 ประวัติการรายงาน」ทันที</div>
+      <div class="note warn"><b>หนึ่งรายงาน = หนึ่งรายการ ต่อสัตว์หนึ่งกลุ่ม</b> — ถ้าต้องรายงานหลายรายการ
+        หรือหลายกลุ่ม (เช่น การุณยฆาตเพศผู้ 10 ตัว และเพศเมีย 8 ตัว) ให้บันทึกแยกคนละรายงาน
+        ระบบจะรวมจำนวนให้เองในสรุปและในโควตาโครงการ</div>
+      <div class="note bad"><b>ถ้าระบบเตือนว่าเกินจำนวนที่อนุมัติ</b> ให้ตรวจสอบตัวเลขอีกครั้งก่อนยืนยัน
+        หากจำเป็นต้องใช้สัตว์เพิ่ม ต้องขออนุมัติแก้ไขโครงการกับคณะกรรมการจริยธรรมฯ ก่อน</div>
+    </div>
+  </div>
+
+  <div class="card" id="alert">
+    <h2>4. 🚨 แจ้งเหตุฉุกเฉิน / ปัญหาสุขภาพสัตว์ <span class="en">Emergency &amp; health alert</span></h2>
+    <div class="body">
+      <div class="note bad"><b>กรณีวิกฤต โทรก่อนเสมอ</b> — สัตว์ชัก หายใจลำบาก เลือดออกมาก สัตว์หลุด
+        หรือระบบห้องเลี้ยงขัดข้อง ให้กด<b>ปุ่มเบอร์โทรสีแดง</b>บนหน้าแจ้งเหตุโทรหาสัตวแพทย์ทันที
+        แล้วค่อยส่งแบบฟอร์มตามหลัง</div>
+
+      <ol class="steps red">
+        <li>กดปุ่มแดง <b>「🚨 แจ้งเหตุฉุกเฉิน」</b> มุมขวาบน (หรือแท็บ「🚨 แจ้งเหตุ / สุขภาพสัตว์」)</li>
+        <li>เลือก <b>ประเภท</b> — 🚨 เหตุฉุกเฉิน (ต้องเลือกลักษณะเหตุด้วย) หรือ 🩺 ปัญหาสุขภาพสัตว์ทดลอง</li>
+        <li>เลือก <b>ระดับความเร่งด่วน</b>
+          <ul>
+            <li><span class="pill bad">🔴 วิกฤต</span> ต้องการสัตวแพทย์ทันที — โทรแจ้งควบคู่ด้วย</li>
+            <li><span class="pill warn">🟠 เร่งด่วน</span> ควรได้รับการตรวจภายใน 2–4 ชั่วโมง</li>
+            <li><span class="pill blue">🔵 ทั่วไป</span> ตรวจภายในวันทำการ หรือขอคำปรึกษา</li>
+          </ul>
+        </li>
+        <li>ระบุ <b>สัตว์ที่พบปัญหา</b> — เลขที่โครงการ (ถ้ามี) · สถานที่/ห้องเลี้ยง * · ชนิดสัตว์ * · จำนวน * · หมายเลขกรงหรือรหัสตัวสัตว์</li>
+        <li>ติ๊ก <b>อาการที่พบ</b> (เลือกได้หลายข้อ) · วันเวลาที่เริ่มพบ * · รายละเอียดเหตุการณ์ * · สิ่งที่ทำไปแล้ว</li>
+        <li><b>📷 แนบรูปภาพ</b> ได้สูงสุด 3 รูป — บนมือถือกดแล้วถ่ายจากกล้องได้ทันที ระบบย่อขนาดรูปให้เอง
+          กดที่รูปเพื่อดูขนาดเต็ม กด ✕ เพื่อลบ</li>
+        <li>ใส่ <b>ชื่อผู้แจ้ง * และเบอร์โทรที่ติดต่อได้ทันที *</b> แล้วกด <b>「🚨 ส่งแจ้งทีมสัตวแพทย์」</b></li>
+      </ol>
+
+      <div class="note ok"><b>เมื่อกดส่ง ระบบจะ</b> ออกเลขที่การแจ้งรูปแบบ <code>VA-2569-1016-K3F7</code> ·
+        เข้ากล่องรับแจ้งของทีมสัตวแพทย์ · ส่ง <b>LINE และอีเมล</b> ถึงสัตวแพทย์ที่รับแจ้งระดับนั้นทันที ·
+        และแสดงปุ่มโทรฉุกเฉินให้กดโทรต่อได้</div>
+
+      <h3>ติดตามผลหลังแจ้ง</h3>
+      <p>ดูสถานะได้ที่รายการด้านล่างของหน้าแจ้งเหตุ</p>
+      <p><span class="pill bad">🆕 รอรับเรื่อง</span> →
+         <span class="pill warn">📥 รับเรื่องแล้ว</span> →
+         <span class="pill blue">💉 กำลังดูแลรักษา</span> →
+         <span class="pill ok">✅ ปิดเรื่องแล้ว</span></p>
+      <ul>
+        <li>แก้ไขหรือเพิ่มข้อมูล/รูปได้<b>ขณะที่ยังเป็น「รอรับเรื่อง」</b> (ปุ่ม ✎)</li>
+        <li>สัตวแพทย์จะบันทึกคำแนะนำและผลการดูแลไว้ในเรื่อง และส่งอีเมลแจ้งผลถึงท่าน</li>
+        <li>ถ้าปิดเรื่องด้วยผล <b>การุณยฆาต</b> หรือ <b>สัตว์ตาย</b> ให้เปิดเรื่องนั้นแล้วกด
+          <b>「📝 ทำรายงานจากเรื่องนี้」</b> ระบบจะเติมฟอร์มรายงานให้อัตโนมัติ ตรวจทานแล้วกดบันทึก</li>
+      </ul>
+      <div class="note info">แจ้งเหตุได้แม้<b>ยังไม่ได้รับอนุมัติบัญชี</b>หรือยังไม่ได้เข้าสู่ระบบ —
+        กรณีนั้นทีมสัตวแพทย์จะติดต่อกลับทางโทรศัพท์หรืออีเมลที่ท่านให้ไว้</div>
+    </div>
+  </div>
+
+  <div class="card" id="history">
+    <h2>5. ดู แก้ไข พิมพ์ PDF และส่งออก Excel <span class="en">History, PDF, export</span></h2>
+    <div class="body">
+      <p>แท็บ <b>「📚 ประวัติการรายงาน」</b> — ท่านเห็นเฉพาะรายงานของตนเอง</p>
+      <table>
+        <thead><tr><th style="width:26%">ปุ่ม</th><th>ใช้ทำอะไร</th></tr></thead>
+        <tbody>
+          <tr><td><b>👁 ดู</b></td><td>เปิดดูรายละเอียดทั้งหมดของรายงาน</td></tr>
+          <tr><td><b>📄 PDF</b></td><td>พิมพ์แบบฟอร์มรายงาน A4 พร้อมช่องลงนาม ผู้รายงาน · เจ้าหน้าที่ · สัตวแพทย์/ประธาน คกส.
+            (ในหน้าต่างพิมพ์เลือก “บันทึกเป็น PDF” ได้)</td></tr>
+          <tr><td><b>✎ แก้ไข</b></td><td>แก้ไขรายงานที่บันทึกไว้ — ระบบจะคำนวณโควตาให้ใหม่</td></tr>
+          <tr><td><b>🗑 ลบ</b></td><td>ลบรายงานที่บันทึกผิดหรือซ้ำ</td></tr>
+          <tr><td><b>⬇ ส่งออก Excel (CSV)</b></td><td>ส่งออกตามเงื่อนไขที่กรองไว้ เปิดด้วย Excel ได้</td></tr>
+          <tr><td><b>⬇ สำรองข้อมูล (JSON)</b></td><td>สำรองข้อมูลในเครื่องไว้เป็นไฟล์ (แนะนำถ้ายังไม่ได้เข้าสู่ระบบ)</td></tr>
+        </tbody>
+      </table>
+      <p>กรองรายการได้ตามโครงการ · รายการที่รายงาน · ช่วงวันที่ · และช่องค้นหา (ผู้รายงาน ชนิดสัตว์ สายพันธุ์ หมายเหตุ)</p>
+    </div>
+  </div>
+
+  <div class="card" id="install">
+    <h2>6. ติดตั้งเป็นแอปบนมือถือ/คอมพิวเตอร์ <span class="en">Install as an app</span></h2>
+    <div class="body">
+      <p>ติดตั้งแล้วจะมีไอคอนเหมือนแอปทั่วไป เปิดได้เร็วและใช้แจ้งเหตุฉุกเฉินได้ทันที</p>
+      <table>
+        <thead><tr><th style="width:26%">อุปกรณ์</th><th>วิธีติดตั้ง</th></tr></thead>
+        <tbody>
+          <tr><td><b>Android</b> (Chrome)</td><td>เปิดเว็บ → เมนู ⋮ → <b>เพิ่มไปยังหน้าจอหลัก</b> (หรือกดปุ่ม「⬇ ติดตั้งแอป」ในระบบ)</td></tr>
+          <tr><td><b>iPhone / iPad</b> (Safari)</td><td>เปิดเว็บ → ปุ่มแชร์ ⬆ → <b>เพิ่มไปยังหน้าจอโฮม</b></td></tr>
+          <tr><td><b>คอมพิวเตอร์</b> (Chrome/Edge)</td><td>กดไอคอน ⊕ ท้ายแถบที่อยู่เว็บ หรือเมนู ⋮ → <b>ติดตั้ง</b></td></tr>
+        </tbody>
+      </table>
+      <div class="note info">เมื่อมีเวอร์ชันใหม่ ระบบจะขึ้นแถบ <b>「🔄 มีแอปเวอร์ชันใหม่」</b> ให้กดอัปเดตได้ทันที</div>
+    </div>
+  </div>
+
+  <div class="card" id="faq">
+    <h2>7. คำถามที่พบบ่อย <span class="en">FAQ</span></h2>
+    <div class="body">
+      <h3>ต้องรายงานเมื่อไร</h3>
+      <p>รายงานทุกครั้งที่มีการการุณยฆาต เคลื่อนย้ายสัตว์ออกนอกสถานที่ หรือสัตว์ตายระหว่างการศึกษา
+        ควรรายงานทันทีหรือภายใน 1–2 วันทำการ เพื่อให้จำนวนสัตว์คงเหลือในระบบเป็นปัจจุบัน</p>
+
+      <h3>รายงานผิด แก้ไขได้ไหม</h3>
+      <p>ได้ — แท็บ「📚 ประวัติการรายงาน」กดปุ่ม ✎ แก้ไข หรือ 🗑 ลบ แล้วบันทึกใหม่ ระบบคำนวณโควตาให้ใหม่อัตโนมัติ</p>
+
+      <h3>เข้าสู่ระบบเครื่องอื่นแล้วข้อมูลอยู่ไหม</h3>
+      <p>อยู่ครบ ถ้าบัญชีได้รับอนุมัติแล้ว ข้อมูลจะซิงก์กับระบบกลางของศูนย์ฯ โดยอัตโนมัติ
+        ถ้ายังไม่ได้เข้าสู่ระบบ ข้อมูลจะอยู่ในเครื่องนั้นเครื่องเดียว</p>
+
+      <h3>ปิดเบราว์เซอร์แล้วข้อมูลหายไหม</h3>
+      <p>ไม่หาย ระบบบันทึกในเครื่องให้ด้วย แต่ถ้าล้างข้อมูลเบราว์เซอร์หรือใช้โหมดไม่ระบุตัวตน ข้อมูลที่ยังไม่ซิงก์อาจหายได้
+        — แนะนำให้เข้าสู่ระบบไว้เสมอ</p>
+
+      <h3>อินเทอร์เน็ตหลุดระหว่างกรอก</h3>
+      <p>ยังบันทึกลงเครื่องได้ตามปกติ ระบบจะแจ้งว่าส่งขึ้นระบบกลางไม่สำเร็จ และจะส่งให้เองเมื่อกลับมาออนไลน์แล้วเปิดระบบอีกครั้ง
+        (ยกเว้นรูปภาพแนบ ซึ่งต้องมีอินเทอร์เน็ตขณะส่ง)</p>
+
+      <h3>แจ้งเหตุแล้วสัตวแพทย์ได้รับจริงไหม</h3>
+      <p>หลังกดส่ง ระบบจะแสดงผลว่าแจ้งทาง LINE และอีเมลสำเร็จกี่ช่องทาง ถ้าขึ้นว่าไม่สำเร็จ ให้กด
+        <b>「✉ เปิดร่างอีเมล」</b> แล้วกดส่ง และ<b>โทรแจ้งโดยตรง</b>ในกรณีวิกฤต</p>
+
+      <h3>ใช้บัญชีเดียวกับระบบอื่นของศูนย์ฯ ได้ไหม</h3>
+      <p>ไม่ได้ ระบบนี้แยกฐานข้อมูลและบัญชีผู้ใช้ของตนเอง ต้องลงทะเบียนใหม่ในระบบนี้</p>
+    </div>
+  </div>
+
+  <div class="card" id="checklist">
+    <h2>8. เช็กลิสต์ก่อนกดส่ง <span class="en">Before you submit</span></h2>
+    <div class="body">
+      <h3>รายงานการปฏิบัติต่อสัตว์</h3>
+      <ul class="check">
+        <li>เลือก<b>เลขที่โครงการ</b>ถูกต้อง ตรงกับที่ได้รับอนุมัติ</li>
+        <li>ชนิดสัตว์ เพศ สายพันธุ์ <b>ตรงกับสัตว์ที่ใช้จริง</b></li>
+        <li><b>จำนวน</b>ถูกต้อง และไม่เกินจำนวนคงเหลือในโครงการ</li>
+        <li>เลือก<b>รายการที่รายงาน</b>และกรอกช่องที่มี * ครบ</li>
+        <li><b>วันที่ดำเนินการ</b>ตรงกับวันที่ทำจริง</li>
+        <li>ชื่อผู้รายงานและช่องทางติดต่อถูกต้อง</li>
+      </ul>
+      <h3>แจ้งเหตุฉุกเฉิน / สัตว์ป่วย</h3>
+      <ul class="check">
+        <li>กรณีวิกฤต — <b>โทรแจ้งแล้ว</b></li>
+        <li>ระบุ<b>สถานที่/ห้องและหมายเลขกรง</b>ให้ชัดเจน เพื่อให้สัตวแพทย์หาสัตว์เจอทันที</li>
+        <li>ติ๊ก<b>อาการ</b>และเขียนรายละเอียดเท่าที่ทราบ</li>
+        <li><b>แนบรูป</b>อาการหรือที่เกิดเหตุ (ถ้าถ่ายได้)</li>
+        <li><b>เบอร์โทรที่รับสายได้ทันที</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ติดต่อศูนย์สัตว์ทดลอง <span class="en">Contact</span></h2>
+    <div class="body">
+      <p>สอบถามการใช้งานระบบ การอนุมัติบัญชี หรือการนำเข้าเลขที่โครงการ — ติดต่อเจ้าหน้าที่ศูนย์สัตว์ทดลอง
+        มหาวิทยาลัยสงขลานครินทร์ · อีเมล <a href="mailto:psu.labanimals@gmail.com">psu.labanimals@gmail.com</a></p>
+      <p>เบอร์โทรฉุกเฉินของสัตวแพทย์แสดงเป็น<b>ปุ่มสีแดง</b>อยู่บนหน้า「🚨 แจ้งเหตุ / สุขภาพสัตว์」ในระบบ
+        (กดที่ปุ่มเพื่อโทรจากมือถือได้ทันที)</p>
+      <p class="no-print">เอกสารอื่น: <a href="วิธีใช้งาน.html">คู่มือฉบับเต็ม (รวมส่วนเจ้าหน้าที่)</a> ·
+        <a href="วิธีติดตั้งแอป.html">วิธีติดตั้งเป็นแอป</a></p>
+    </div>
+  </div>
+
+  <footer>
+    คู่มือสำหรับนักวิจัย · ปรับปรุง 16 ตุลาคม 2569 (ระบบเวอร์ชัน 1.7.0)<br>
+    ศูนย์สัตว์ทดลอง มหาวิทยาลัยสงขลานครินทร์ · Laboratory Animal Service Center, PSU
+  </footer>
+</div>
+</body>
+</html>
