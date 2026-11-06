@@ -128,6 +128,9 @@
             "email":     { ".validate": "newData.isString() && newData.val().length <= 120" },
             "org":       { ".validate": "newData.isString() && newData.val().length <= 200" },
             "phone":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "role":      { ".validate": "newData.isString() && (newData.val() == '' || newData.val().matches(/^(pi|assistant|student)$/))" },
+            "piName":    { ".validate": "newData.isString() && newData.val().length <= 150" },
+            "piEmail":   { ".validate": "newData.isString() && newData.val().length <= 120" },
             "createdAt": { ".validate": "newData.isString() && newData.val().length <= 40" },
             "$other":    { ".validate": false }
           }

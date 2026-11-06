@@ -1297,6 +1297,28 @@
           </label>
         </div>
         <br>
+        <label class="field">บทบาทในงานวิจัย <span class="en">Role</span> <span class="req">*</span>
+          <select id="su_role" required onchange="onPickSignupRole()">
+            <option value="">— เลือกบทบาท / Select role —</option>
+            <option value="pi">🎓 หัวหน้าโครงการวิจัย (PI) / Principal Investigator</option>
+            <option value="assistant">🧑‍🔬 ผู้ช่วยวิจัย / Research assistant</option>
+            <option value="student">🎒 นักศึกษา / Student</option>
+          </select>
+        </label>
+        <div id="su_piBox" class="hidden">
+          <br>
+          <div class="grid grid-2">
+            <label class="field">ชื่อหัวหน้าโครงการ (PI) ที่สังกัด <span class="en">PI's name</span> <span class="req">*</span>
+              <input type="text" id="su_piName" placeholder="เช่น รศ.ดร.สมชาย ใจดี">
+            </label>
+            <label class="field">อีเมลของ PI <span class="en">PI's email</span>
+              <input type="email" id="su_piEmail" placeholder="pi@psu.ac.th">
+            </label>
+          </div>
+          <div class="hint">ระบบใช้ชื่อ/อีเมลของ PI เพื่อให้ท่านเห็นรายละเอียดโครงการของ PI ท่านนั้นได้
+            — กรอกอีเมลของ PI ด้วยจะจับคู่ได้แม่นยำที่สุด</div>
+        </div>
+        <br>
         <label class="field">รหัสผ่าน <span class="req">*</span> (อย่างน้อย 6 ตัวอักษร)
           <input type="password" id="su_pass" required minlength="6" autocomplete="new-password">
         </label>
@@ -1322,7 +1344,7 @@
 'use strict';
 
 /* ==================== ค่าคงที่ / ข้อมูลอ้างอิง ==================== */
-const APP_VERSION = '1.7.3 (16 ต.ค. 2569)';
+const APP_VERSION = '1.8.0 (5 พ.ย. 2569)';
 const STORE_KEY = 'lascAnimalReportData_v1';
 const ROLE_KEY  = 'lascAnimalReportRole';
 const PIN_KEY   = 'lascAnimalReportAdminPin';
@@ -1414,6 +1436,96 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function projectById(id) { return db.projects.find(p => p.id === id) || null; }
+
+/* ==================== สิทธิ์เห็นรายละเอียดโครงการวิจัย ====================
+   เห็นรายละเอียด (ชื่อโครงการ · PI · ชนิดสัตว์ · จำนวนที่อนุมัติ ฯลฯ) ได้เฉพาะ
+   เจ้าหน้าที่ศูนย์ฯ · หัวหน้าโครงการ (PI) เจ้าของโครงการ · และผู้ช่วยวิจัย/นักศึกษาที่ระบุว่าอยู่ใต้ PI คนนั้น
+   คนอื่นเห็นเฉพาะ「เลขที่โครงการ」เท่านั้น */
+const USER_ROLES = {
+  pi:        { t: 'หัวหน้าโครงการวิจัย (PI)', en: 'Principal Investigator', icon: '🎓' },
+  assistant: { t: 'ผู้ช่วยวิจัย',             en: 'Research assistant',     icon: '🧑‍🔬' },
+  student:   { t: 'นักศึกษา',                 en: 'Student',                icon: '🎒' }
+};
+const NAME_TITLES = [
+  'ศาสตราจารย์เกียรติคุณ', 'ศาสตราจารย์', 'รองศาสตราจารย์', 'ผู้ช่วยศาสตราจารย์',
+  'นางสาว', 'นาง', 'นาย', 'ดร.', 'ดร', 'รศ.', 'ผศ.', 'ศ.', 'รศ', 'ผศ',
+  'associate professor', 'assistant professor', 'professor', 'assoc.prof.', 'asst.prof.',
+  'prof.', 'prof', 'assoc.', 'assoc', 'asst.', 'asst', 'dr.', 'dr', 'mr.', 'mr',
+  'mrs.', 'mrs', 'ms.', 'ms', 'miss'
+];
+function lcTrim(s) { return String(s || '').trim().toLowerCase(); }
+/* ตัดคำนำหน้าชื่อ ช่องว่าง และจุด เพื่อเทียบชื่อ PI ที่สะกดต่างกันเล็กน้อยได้ */
+function normName(s) {
+  let t = lcTrim(s).replace(/\(.*?\)/g, ' ');
+  for (let guard = 0; guard < 6; guard++) {
+    t = t.replace(/^[\s.]+/, '');
+    const hit = NAME_TITLES.find(w => t.startsWith(w));
+    if (!hit) break;
+    t = t.slice(hit.length);
+  }
+  return t.replace(/[\s.\-_​]+/g, '');
+}
+/* PI ที่ผู้ใช้ปัจจุบันสังกัด — ถ้าเป็น PI เองก็คือตัวเอง */
+function myPiKey() {
+  const p = myProfile || {};
+  if (p.role === 'assistant' || p.role === 'student') {
+    return { email: lcTrim(p.piEmail), name: normName(p.piName) };
+  }
+  return { email: lcTrim(p.email), name: normName(p.name) };   /* ไม่ระบุบทบาท = ถือว่าเป็น PI ของตัวเอง */
+}
+/* เจ้าหน้าที่/โหมดแอดมินในเครื่อง — เห็นทะเบียนโครงการได้ทั้งหมด */
+function projectsUnlocked() { return isStaff || (isAdmin && !cloudUser); }
+function canSeeProjectDetail(p) {
+  if (!p) return false;
+  if (projectsUnlocked()) return true;
+  if (!cloudUser || !myProfile) return false;
+  const key = myPiKey();
+  const pEmail = lcTrim(p.piEmail), pName = normName(p.piName);
+  if (key.email && pEmail && key.email === pEmail) return true;
+  if (key.name && pName && key.name === pName) return true;
+  return false;
+}
+/* ข้อความในรายการเลือกโครงการ — ผู้ไม่เกี่ยวข้องเห็นเฉพาะเลขที่โครงการ */
+function projLabel(p, maxLen) {
+  if (!p) return '';
+  const no = p.projectNo || '';
+  if (!canSeeProjectDetail(p)) return no;
+  const nm = String(p.projectName || '');
+  if (!nm) return no;
+  return no + ' — ' + (maxLen && nm.length > maxLen ? nm.slice(0, maxLen) : nm);
+}
+/* ชื่อโครงการ/ชื่อ PI ที่จะแสดงในระเบียนหนึ่ง ๆ — ใช้ค่าที่บันทึกไว้ก่อน
+   ถ้าว่าง (บันทึกโดยผู้ที่ไม่เกี่ยวข้อง) ให้ดึงจากทะเบียนโครงการเฉพาะผู้ที่มีสิทธิ์เห็น */
+function recProjectName(r) {
+  if (r && r.projectName) return r.projectName;
+  const p = r && projectById(r.projectId);
+  return (p && canSeeProjectDetail(p)) ? (p.projectName || '') : '';
+}
+function recPiName(r) {
+  if (r && r.piName) return r.piName;
+  const p = r && projectById(r.projectId);
+  return (p && canSeeProjectDetail(p)) ? (p.piName || '') : '';
+}
+/* วาดทุกจุดที่แสดงข้อมูลโครงการใหม่ (เรียกเมื่อสิทธิ์หรือบทบาทเปลี่ยน) */
+function refreshProjectViews() {
+  const s = document.getElementById('r_projSearch');
+  if (!s) return;                       /* ยังโหลด DOM ไม่เสร็จ */
+  fillProjectSelect(s.value);
+  onPickProject();
+  if (typeof renderHistory === 'function') renderHistory();
+  if (typeof renderSummary === 'function') renderSummary();
+}
+/* ใช้ตอนบันทึกรายงาน/แจ้งเหตุ — ไม่เก็บชื่อโครงการและชื่อ PI ไว้ในระเบียนของผู้ที่ไม่เกี่ยวข้อง */
+function projSnapshot(p) {
+  if (!p) return { projectId: '', projectNo: '', projectName: '', piName: '' };
+  const ok = canSeeProjectDetail(p);
+  return {
+    projectId: p.id,
+    projectNo: p.projectNo || '',
+    projectName: ok ? (p.projectName || '') : '',
+    piName: ok ? (p.piName || '') : ''
+  };
+}
 function reportsOfProject(id) { return db.reports.filter(r => r.projectId === id); }
 function usedOfProject(id, exceptReportId) {
   return reportsOfProject(id)
@@ -1971,10 +2083,13 @@ function fillProjectSelect(filter) {
   const keep = sel.value;
   const q = (filter || '').trim().toLowerCase();
   const list = db.projects
-    .filter(p => !q || [p.projectNo, p.projectName, p.piName].some(x => (x || '').toLowerCase().includes(q)))
+    /* ผู้ที่ไม่เกี่ยวข้องกับโครงการค้นได้เฉพาะด้วยเลขที่โครงการ (กันการไล่เดาชื่อโครงการ/ชื่อ PI) */
+    .filter(p => !q || (canSeeProjectDetail(p)
+      ? [p.projectNo, p.projectName, p.piName].some(x => (x || '').toLowerCase().includes(q))
+      : (p.projectNo || '').toLowerCase().includes(q)))
     .sort((a, b) => (a.projectNo || '').localeCompare(b.projectNo || '', 'th'));
   sel.innerHTML = '<option value="">— เลือกเลขที่โครงการ / Select protocol —</option>' + list.map(p =>
-    `<option value="${p.id}">${esc(p.projectNo)} — ${esc(p.projectName)}</option>`).join('');
+    `<option value="${p.id}">${esc(projLabel(p))}</option>`).join('');
   if (list.some(p => p.id === keep)) sel.value = keep;
   else if (keep) onPickProject();
 
@@ -1995,6 +2110,23 @@ function onPickProject() {
   const box = document.getElementById('projInfoBox');
   if (!p) { box.classList.add('hidden'); renderQuota(); return; }
   box.classList.remove('hidden');
+  /* ผู้ที่ไม่ใช่ PI เจ้าของโครงการ หรือผู้ช่วยวิจัย/นักศึกษาในทีมนั้น — เห็นเฉพาะเลขที่โครงการ */
+  if (!canSeeProjectDetail(p)) {
+    const needRole = cloudUser && myProfile && !myProfile.role;
+    document.getElementById('projInfo').innerHTML =
+      `<div><div class="k">เลขที่โครงการ</div><div class="v">${esc(p.projectNo)}</div></div>` +
+      `<div style="grid-column:1/-1"><div class="warn-box" style="margin:0">🔒 <b>ข้อมูลโครงการนี้ถูกปิดไว้</b> —
+        รายละเอียดโครงการ (ชื่อโครงการ · หัวหน้าโครงการ · ชนิดสัตว์ · จำนวนที่อนุมัติ)
+        แสดงเฉพาะหัวหน้าโครงการ (PI) เจ้าของโครงการ ผู้ช่วยวิจัย/นักศึกษาในทีมของ PI ท่านนั้น และเจ้าหน้าที่ศูนย์ฯ` +
+      (needRole
+        ? ` <br>ข้อมูลลงทะเบียนของท่านยังไม่ได้ระบุบทบาทและ PI ที่สังกัด —
+            <a href="#" onclick="openProfileModal();return false"><b>อัปเดตข้อมูลลงทะเบียน</b></a>`
+        : ` <br>หากโครงการนี้เป็นของท่านจริง กรุณาตรวจว่าชื่อ/อีเมลของ PI ในข้อมูลลงทะเบียนตรงกับในทะเบียนโครงการ
+            (<a href="#" onclick="openProfileModal();return false">แก้ไขข้อมูลลงทะเบียน</a>) หรือแจ้งเจ้าหน้าที่ศูนย์ฯ`) +
+      `</div></div>`;
+    renderQuota();
+    return;
+  }
   const expired = p.expiry && p.expiry < todayISO();
   document.getElementById('projInfo').innerHTML = [
     ['เลขที่โครงการ', esc(p.projectNo)],
@@ -2022,6 +2154,12 @@ function renderQuota() {
   const warn = document.getElementById('qtyWarn');
   const remainShow = document.getElementById('r_remainShow');
   if (!p) { box.innerHTML = ''; warn.innerHTML = ''; remainShow.value = ''; return; }
+  /* จำนวนที่อนุมัติ/คงเหลือ ถือเป็นรายละเอียดโครงการ — ไม่แสดงให้ผู้ที่ไม่เกี่ยวข้อง */
+  if (!canSeeProjectDetail(p)) {
+    box.innerHTML = ''; warn.innerHTML = '';
+    remainShow.value = 'เฉพาะผู้เกี่ยวข้องกับโครงการ';
+    return;
+  }
 
   const editId = document.getElementById('r_editId').value;
   const approved = Number(p.approved) || 0;
@@ -2072,11 +2210,7 @@ function saveReport(ev) {
   const action = (document.querySelector('input[name="r_action"]:checked') || {}).value || '';
   if (!action) { alert('กรุณาเลือกรายการที่ต้องการรายงาน (Euthanasia / Off-site transport / Died during the study)'); return; }
 
-  const rec = {
-    projectId: p.id,
-    projectNo: p.projectNo,
-    projectName: p.projectName,
-    piName: p.piName,
+  const rec = Object.assign(projSnapshot(p), {
     species: document.getElementById('r_species').value.trim(),
     sex: document.getElementById('r_sex').value,
     strain: document.getElementById('r_strain').value.trim(),
@@ -2089,7 +2223,7 @@ function saveReport(ev) {
     reporterPhone: document.getElementById('r_reporterPhone').value.trim(),
     note: document.getElementById('r_note').value.trim(),
     detail: {}
-  };
+  });
   if (rec.qty < 1) { alert('กรุณาระบุจำนวนสัตว์ที่ต้องการรายงาน'); return; }
 
   if (action === 'euthanasia') {
@@ -2265,7 +2399,7 @@ function filteredReports() {
     if (from && (r.actionDate || '') < from) return false;
     if (to && (r.actionDate || '') > to) return false;
     if (q) {
-      const hay = [r.docNo, r.projectNo, r.projectName, r.reporter, r.species, r.strain, r.note, r.euthMethod]
+      const hay = [r.docNo, r.projectNo, recProjectName(r), r.reporter, r.species, r.strain, r.note, r.euthMethod]
         .join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
@@ -2305,7 +2439,7 @@ function renderHistory() {
       return `<tr>
         <td><b>${esc(r.docNo || '-')}</b>${r.overQuota ? '<div><span class="badge red">เกินจำนวนอนุมัติ</span></div>' : ''}</td>
         <td>${fmtDateShort(r.actionDate)}</td>
-        <td>${esc(r.projectNo)}<div style="font-size:12.2px;color:var(--muted)">${esc((r.projectName || '').slice(0, 40))}</div></td>
+        <td>${esc(r.projectNo)}<div style="font-size:12.2px;color:var(--muted)">${esc(recProjectName(r).slice(0, 40))}</div></td>
         <td>${esc(r.species)}<div style="font-size:12.2px;color:var(--muted)">${esc(r.sex || '-')} · ${esc(r.strain || '-')}</div></td>
         <td style="text-align:right"><b>${Number(r.qty) || 0}</b></td>
         <td><span class="badge ${a.cls}">${a.icon} ${esc(a.th)}</span>${meth}</td>
@@ -2356,8 +2490,8 @@ function viewReport(id) {
   const a = ACTIONS[r.action] || { th: r.action, en: '' };
   const rows = [
     ['เลขที่รายงาน', r.docNo], ['วันที่ดำเนินการ', fmtDate(r.actionDate)],
-    ['เลขที่โครงการ', r.projectNo], ['ชื่อโครงการ', r.projectName],
-    ['หัวหน้าโครงการ (PI)', r.piName],
+    ['เลขที่โครงการ', r.projectNo], ['ชื่อโครงการ', recProjectName(r)],
+    ['หัวหน้าโครงการ (PI)', recPiName(r)],
     ['ชนิดสัตว์ทดลอง', r.species], ['เพศ', r.sex], ['สายพันธุ์', r.strain],
     ['จำนวนที่รายงาน', `${r.qty} ตัว`],
     ['รายการที่รายงาน', `${a.th} (${a.en})`]
@@ -2424,8 +2558,8 @@ function printReport(id) {
 <table>
   <tr><td class="sec" colspan="2">ส่วนที่ 1 ข้อมูลโครงการวิจัย</td></tr>
   <tr><th>เลขที่โครงการวิจัย</th><td>${esc(r.projectNo)}</td></tr>
-  <tr><th>ชื่อโครงการ</th><td>${esc(r.projectName)}</td></tr>
-  <tr><th>หัวหน้าโครงการ (PI)</th><td>${esc(r.piName || (p && p.piName) || '-')}</td></tr>
+  <tr><th>ชื่อโครงการ</th><td>${esc(recProjectName(r)) || '-'}</td></tr>
+  <tr><th>หัวหน้าโครงการ (PI)</th><td>${esc(recPiName(r)) || '-'}</td></tr>
   <tr><th>จำนวนสัตว์ที่ได้รับอนุมัติ</th><td>${p ? (Number(p.approved) || 0) + ' ตัว' : '-'}</td></tr>
   <tr><th>วันหมดอายุโครงการ</th><td>${p && p.expiry ? fmtDate(p.expiry) : '-'}</td></tr>
 </table>
@@ -2515,7 +2649,7 @@ function renderSummary() {
     if (bySpecies[sp][r.action] != null) bySpecies[sp][r.action] += q;
     bySpecies[sp].total += q;
     const key = r.projectNo || '-';
-    byProject[key] = byProject[key] || { name: r.projectName || '', euthanasia: 0, offsite: 0, died: 0, total: 0, n: 0 };
+    byProject[key] = byProject[key] || { name: recProjectName(r), euthanasia: 0, offsite: 0, died: 0, total: 0, n: 0 };
     if (byProject[key][r.action] != null) byProject[key][r.action] += q;
     byProject[key].total += q;
     byProject[key].n++;
@@ -2685,7 +2819,7 @@ function alertRows(a) {
     ['ประเภท', `${t.th} (${t.en})`],
     ['ระดับความเร่งด่วน', `${u.icon} ${u.t}`],
     ['ลักษณะเหตุฉุกเฉิน', a.category],
-    ['เลขที่โครงการ', a.projectNo ? `${a.projectNo} — ${a.projectName || ''}` : ''],
+    ['เลขที่โครงการ', a.projectNo ? (a.projectNo + (recProjectName(a) ? ' — ' + recProjectName(a) : '')) : ''],
     ['หัวหน้าโครงการ (PI)', a.piName],
     ['สถานที่', a.location],
     ['หมายเลขกรง / Rack / รหัสสัตว์', a.cage],
@@ -2825,12 +2959,12 @@ function fillAlertProjectSelect() {
   const keep = sel.value;
   sel.innerHTML = '<option value="">— ไม่ระบุ / ไม่อยู่ในโครงการ —</option>' + db.projects
     .slice().sort((a, b) => (a.projectNo || '').localeCompare(b.projectNo || '', 'th'))
-    .map(p => `<option value="${p.id}">${esc(p.projectNo)} — ${esc((p.projectName || '').slice(0, 60))}</option>`).join('');
+    .map(p => `<option value="${p.id}">${esc(projLabel(p, 60))}</option>`).join('');
   sel.value = keep;
 }
 function onPickAlertProject() {
   const p = projectById(document.getElementById('a_project').value);
-  if (!p) return;
+  if (!p || !canSeeProjectDetail(p)) return;   /* ไม่เติมข้อมูลสัตว์จากโครงการของผู้อื่น */
   const set = (id, v) => { const el = document.getElementById(id); if (!el.value && v) el.value = v; };
   set('a_species', p.species); set('a_strain', p.strain); set('a_sex', p.sex);
 }
@@ -2897,7 +3031,7 @@ async function saveAlert(ev) {
     category: type === 'emergency' ? category : '',
     signs: [...document.querySelectorAll('.aSign:checked')].map(c => c.value),
     photos: alertPhotos.slice(0, MAX_PHOTOS),
-    projectId: p ? p.id : '', projectNo: p ? p.projectNo : '', projectName: p ? p.projectName : '', piName: p ? p.piName : '',
+    ...projSnapshot(p),
     location: document.getElementById('a_location').value.trim(),
     species:  document.getElementById('a_species').value.trim(),
     sex:      document.getElementById('a_sex').value,
@@ -3432,7 +3566,7 @@ function exportCSV() {
   const rows = list.map(r => {
     const a = ACTIONS[r.action] || { th: r.action, en: '' };
     const det = detailRows(r).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(' | ');
-    return [r.docNo, r.actionDate, r.projectNo, r.projectName, r.piName,
+    return [r.docNo, r.actionDate, r.projectNo, recProjectName(r), recPiName(r),
       r.species, r.sex, r.strain, r.qty, a.th, a.en,
       r.euthMethod || '', det, r.place, r.reporter, r.reporterEmail, r.reporterPhone,
       r.overQuota ? 'ใช่' : '', r.note, r.createdAt ? r.createdAt.slice(0, 10) : ''].map(csvCell).join(',');
@@ -3586,14 +3720,38 @@ async function doLogin(ev) {
     document.getElementById('lg_pass').value = '';
   }
 }
-/* ลงทะเบียนนักวิจัยแบบง่าย: อีเมล + รหัสผ่าน + ชื่อ → รอเจ้าหน้าที่อนุมัติ */
+/* ผู้ช่วยวิจัย/นักศึกษา ต้องระบุ PI ที่สังกัด — PI เองไม่ต้อง */
+function onPickSignupRole() {
+  const role = document.getElementById('su_role').value;
+  const need = role === 'assistant' || role === 'student';
+  document.getElementById('su_piBox').classList.toggle('hidden', !need);
+  document.getElementById('su_piName').required = need;
+}
+function onPickProfileRole() {
+  const role = document.getElementById('pf_role').value;
+  const need = role === 'assistant' || role === 'student';
+  document.getElementById('pf_piBox').classList.toggle('hidden', !need);
+  document.getElementById('pf_piName').required = need;
+}
+
+/* ลงทะเบียนนักวิจัยแบบง่าย: อีเมล + รหัสผ่าน + ชื่อ + บทบาท → รอเจ้าหน้าที่อนุมัติ */
 async function doSignup(ev) {
   ev.preventDefault();
   if (!fb) return;
   const btn = document.getElementById('su_submit');
   btn.disabled = true; btn.textContent = 'กำลังลงทะเบียน…';
   signingUp = true;
-  document.getElementById('lg_error').classList.add('hidden');
+  const errBox = document.getElementById('lg_error');
+  errBox.classList.add('hidden');
+  const role = document.getElementById('su_role').value;
+  const piName = document.getElementById('su_piName').value.trim();
+  if ((role === 'assistant' || role === 'student') && !piName) {
+    errBox.textContent = 'กรุณาระบุชื่อหัวหน้าโครงการ (PI) ที่ท่านสังกัด';
+    errBox.classList.remove('hidden');
+    document.getElementById('su_piName').focus();
+    signingUp = false; btn.disabled = false; btn.textContent = '📝 ลงทะเบียน';
+    return;
+  }
   try {
     const cred = await fb.createUser(fb.auth, document.getElementById('su_email').value.trim(), document.getElementById('su_pass').value);
     const profile = {
@@ -3601,6 +3759,9 @@ async function doSignup(ev) {
       email: document.getElementById('su_email').value.trim(),
       org:   document.getElementById('su_org').value.trim(),
       phone: document.getElementById('su_phone').value.trim(),
+      role:  role,
+      piName:  role === 'pi' ? '' : piName,
+      piEmail: role === 'pi' ? '' : document.getElementById('su_piEmail').value.trim(),
       createdAt: new Date().toISOString()
     };
     await saveMyProfile(cred.user.uid, profile);
@@ -3615,6 +3776,9 @@ async function saveMyProfile(uidv, profile) {
   await fb.set(fb.ref(fb.rtdb, cloudPath('users/' + uidv)), profile);
   myProfile = profile;
   fillReporterFromProfile(profile);
+  /* บทบาท/PI เปลี่ยน → สิทธิ์เห็นรายละเอียดโครงการเปลี่ยนตาม ต้องวาดรายการโครงการใหม่ */
+  refreshProjectViews();
+  renderMemberBar();
   if (document.getElementById('pf_name')) closeModal();
   postNotify({ event: 'register', uid: uidv });   /* แจ้งเจ้าหน้าที่ว่ามีผู้ลงทะเบียนใหม่ (ถ้าต่อ n8n ไว้) */
 }
@@ -3642,6 +3806,21 @@ function openProfileModal() {
             <div class="grid grid-2">
               <label class="field">หน่วยงาน / คณะ<input type="text" id="pf_org" value="${esc(p.org || '')}"></label>
               <label class="field">เบอร์โทร<input type="tel" id="pf_phone" value="${esc(p.phone || '')}"></label>
+            </div><br>
+            <label class="field">บทบาทในงานวิจัย <span class="req">*</span>
+              <select id="pf_role" required onchange="onPickProfileRole()">
+                <option value="">— เลือกบทบาท / Select role —</option>
+                ${Object.entries(USER_ROLES).map(([k, v]) =>
+                  `<option value="${k}"${p.role === k ? ' selected' : ''}>${v.icon} ${v.t} / ${v.en}</option>`).join('')}
+              </select></label>
+            <div id="pf_piBox" class="${(p.role === 'assistant' || p.role === 'student') ? '' : 'hidden'}"><br>
+              <div class="grid grid-2">
+                <label class="field">ชื่อหัวหน้าโครงการ (PI) ที่สังกัด <span class="req">*</span>
+                  <input type="text" id="pf_piName" value="${esc(p.piName || '')}" placeholder="เช่น รศ.ดร.สมชาย ใจดี"></label>
+                <label class="field">อีเมลของ PI
+                  <input type="email" id="pf_piEmail" value="${esc(p.piEmail || '')}" placeholder="pi@psu.ac.th"></label>
+              </div>
+              <div class="hint">ใช้จับคู่ว่าท่านอยู่ในทีมของ PI ท่านใด เพื่อให้เห็นรายละเอียดโครงการของทีมนั้น</div>
             </div>
             <div class="form-actions"><button type="submit" class="btn success">💾 ส่งข้อมูลลงทะเบียน</button></div>
             <div class="hint">เจ้าหน้าที่จะอนุมัติบัญชีจากข้อมูลนี้</div>
@@ -3652,11 +3831,21 @@ function openProfileModal() {
 }
 async function submitProfileModal(ev) {
   ev.preventDefault();
+  const role = document.getElementById('pf_role').value;
+  const piName = document.getElementById('pf_piName').value.trim();
+  if ((role === 'assistant' || role === 'student') && !piName) {
+    alert('กรุณาระบุชื่อหัวหน้าโครงการ (PI) ที่ท่านสังกัด');
+    document.getElementById('pf_piName').focus();
+    return;
+  }
   const profile = {
     name: document.getElementById('pf_name').value.trim(),
     email: document.getElementById('pf_email').value.trim(),
     org: document.getElementById('pf_org').value.trim(),
     phone: document.getElementById('pf_phone').value.trim(),
+    role: role,
+    piName:  role === 'pi' ? '' : piName,
+    piEmail: role === 'pi' ? '' : document.getElementById('pf_piEmail').value.trim(),
     createdAt: (myProfile && myProfile.createdAt) || new Date().toISOString()
   };
   try { await saveMyProfile(cloudUser.uid, profile); closeModal(); toast('ส่งข้อมูลลงทะเบียนแล้ว — รอเจ้าหน้าที่อนุมัติ'); }
@@ -3697,6 +3886,11 @@ function renderMemberBar() {
     setCloudChip('err', (memberStatus === 'rejected' ? '⛔ บัญชีไม่ได้รับอนุมัติ' : '⛔ บัญชีถูกระงับ') + ' · ' + (cloudUser.email || ''));
     setCloudBar(`⛔ บัญชี <b>${who}</b> ${memberStatus === 'rejected' ? 'ไม่ได้รับอนุมัติ' : 'ถูกระงับการใช้งาน'}
       — รายงานจะเก็บในเครื่องนี้เท่านั้น กรุณาติดต่อเจ้าหน้าที่ศูนย์สัตว์ทดลอง`);
+  } else if (myProfile && !myProfile.role && !isStaff) {
+    /* สมาชิกเดิมที่ลงทะเบียนไว้ก่อนมีการแยกบทบาท — ขอให้ระบุบทบาทเพื่อให้เห็นโครงการของทีมตัวเอง */
+    setCloudBar(`👤 ข้อมูลลงทะเบียนของ <b>${who}</b> ยังไม่ได้ระบุ<b>บทบาท (PI / ผู้ช่วยวิจัย / นักศึกษา)</b>
+      — ระบบจะแสดงรายละเอียดโครงการให้เฉพาะผู้ที่เกี่ยวข้องกับโครงการนั้น
+      · <a href="#" onclick="openProfileModal();return false"><b>ระบุบทบาทของท่าน</b></a>`);
   } else {
     setCloudBar('');
   }
@@ -3854,6 +4048,7 @@ window.onFirebaseReady = function (api) {
       isStaff = false;
       renderMemberBar();
       applyRole();
+      refreshProjectViews();
       return;
     }
     setCloudChip('', '☁ กำลังตรวจสอบสิทธิ์…');
@@ -3866,6 +4061,7 @@ window.onFirebaseReady = function (api) {
       myProfile = pr.exists() ? pr.val() : null;
     } catch (e) {}
     fillReporterFromProfile(myProfile);
+    refreshProjectViews();        /* สิทธิ์เห็นรายละเอียดโครงการขึ้นกับบทบาทในโปรไฟล์ */
     if (isStaff) {
       memberStatus = 'staff';
       applyRole();
@@ -3987,19 +4183,23 @@ function renderMembers() {
   const q = document.getElementById('mb_search').value.trim().toLowerCase();
   const rank = { pending: 0, approved: 1, suspended: 2, rejected: 3 };
   const list = Object.keys(ADMIN.users).map(u => Object.assign({ uid: u, status: memberOf(u), m: ADMIN.members[u] || {} }, ADMIN.users[u]))
-    .filter(x => (!f || x.status === f) && (!q || [x.name, x.email, x.org, x.phone].join(' ').toLowerCase().includes(q)))
+    .filter(x => (!f || x.status === f) && (!q || [x.name, x.email, x.org, x.phone, x.piName, x.piEmail].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => (rank[a.status] - rank[b.status]) || (b.createdAt || '').localeCompare(a.createdAt || ''));
   document.getElementById('memberStats').innerHTML = `<div class="stat-grid">${Object.entries(MEMBER_STATUS).map(([k, v]) =>
     `<div class="stat ${k === 'pending' ? 'amber' : k === 'approved' ? 'green' : k === 'rejected' ? 'red' : ''}"><div class="n">${Object.keys(ADMIN.users).filter(u => memberOf(u) === k).length}</div><div class="l">${v.icon} ${v.t}</div></div>`).join('')}</div>`;
   if (!list.length) { host.innerHTML = '<div class="empty">ไม่มีผู้ลงทะเบียนที่ตรงกับเงื่อนไข</div>'; return; }
   host.innerHTML = `<table><thead><tr>
       <th><input type="checkbox" onchange="document.querySelectorAll('.mbChk').forEach(c=>c.checked=this.checked)"></th>
-      <th>ชื่อ–สกุล</th><th>อีเมล</th><th>หน่วยงาน / เบอร์โทร</th><th>ลงทะเบียนเมื่อ</th><th>สถานะ</th><th></th>
+      <th>ชื่อ–สกุล</th><th>บทบาท / PI ที่สังกัด</th><th>อีเมล</th><th>หน่วยงาน / เบอร์โทร</th><th>ลงทะเบียนเมื่อ</th><th>สถานะ</th><th></th>
     </tr></thead><tbody>${list.map(x => {
       const s = MEMBER_STATUS[x.status] || MEMBER_STATUS.pending;
       return `<tr>
         <td><input type="checkbox" class="mbChk" value="${esc(x.uid)}"></td>
         <td><b>${esc(x.name || '-')}</b></td>
+        <td>${x.role && USER_ROLES[x.role]
+              ? `${USER_ROLES[x.role].icon} ${esc(USER_ROLES[x.role].t)}`
+              : '<span class="badge amber">ยังไม่ระบุบทบาท</span>'}
+            ${x.piName ? `<div style="font-size:12.2px;color:var(--muted)">PI: ${esc(x.piName)}${x.piEmail ? ' · ' + esc(x.piEmail) : ''}</div>` : ''}</td>
         <td>${esc(x.email || '-')}</td>
         <td>${esc(x.org || '-')}<div style="font-size:12.2px;color:var(--muted)">${esc(x.phone || '')}</div></td>
         <td>${x.createdAt ? fmtStamp(x.createdAt) : '-'}</td>
