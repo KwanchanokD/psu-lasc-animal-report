@@ -904,6 +904,8 @@
         <h2>👥 อนุมัตินักวิจัยที่ลงทะเบียน</h2>
         <div class="toolbar-right">
           <button class="btn small success" onclick="approveSelectedMembers()">✅ อนุมัติที่เลือก</button>
+          <button class="btn small secondary" onclick="setPiForSelected()">🎓 ตั้งบทบาท / PI ให้ที่เลือก</button>
+          <button class="btn small secondary" onclick="exportMembersCSV()">⬇ ส่งออกรายชื่อ (CSV)</button>
         </div>
       </div>
       <div class="card-body">
@@ -913,15 +915,16 @@
         <div class="grid grid-2" style="margin-top:12px">
           <label class="field">สถานะ
             <select id="mb_status" onchange="renderMembers()">
-              <option value="pending">⏳ รออนุมัติ</option>
               <option value="">ทั้งหมด</option>
+              <option value="pending">⏳ รออนุมัติ</option>
               <option value="approved">✅ อนุมัติแล้ว</option>
               <option value="rejected">⛔ ไม่อนุมัติ</option>
               <option value="suspended">⏸ ระงับการใช้งาน</option>
+              <option value="norole">⚠️ ยังไม่ระบุบทบาท / PI (ผู้ลงทะเบียนเดิม)</option>
             </select>
           </label>
           <label class="field">ค้นหา
-            <input type="text" id="mb_search" placeholder="ชื่อ / อีเมล / หน่วยงาน" oninput="renderMembers()">
+            <input type="text" id="mb_search" placeholder="ชื่อ / อีเมล / หน่วยงาน / ชื่อ PI" oninput="renderMembers()">
           </label>
         </div>
         <div id="memberStats" style="margin-top:14px"></div>
@@ -1096,11 +1099,11 @@
       <div class="card-body" style="text-align:center;padding:40px 18px">
         <div style="font-size:40px">🔐</div>
         <h2 style="font-size:17px;margin:8px 0;color:var(--primary-dark)">ส่วนของเจ้าหน้าที่ (แอดมิน)</h2>
-        <p style="color:var(--muted);font-size:14px;max-width:560px;margin:0 auto 16px">
+        <p id="adminLockedMsg" style="color:var(--muted);font-size:14px;max-width:560px;margin:0 auto 16px">
           เมนูนี้ใช้สำหรับเจ้าหน้าที่ศูนย์สัตว์ทดลองในการ<b>ดึงข้อมูลโครงการจากระบบจริยธรรมการวิจัยในสัตว์</b>
           (animalethic.research.psu.ac.th) เข้าสู่ทะเบียนโครงการ เพื่อให้นักวิจัยเลือกเลขที่โครงการเมื่อรายงาน
         </p>
-        <button class="btn" onclick="toggleRole()">🔐 เข้าสู่โหมดแอดมิน</button>
+        <button class="btn" id="adminLockedBtn" onclick="toggleRole()">🔐 เข้าสู่โหมดแอดมิน</button>
       </div>
     </div>
 
@@ -1344,7 +1347,7 @@
 'use strict';
 
 /* ==================== ค่าคงที่ / ข้อมูลอ้างอิง ==================== */
-const APP_VERSION = '1.8.1 (6 พ.ย. 2569)';
+const APP_VERSION = '1.8.2 (6 พ.ย. 2569)';
 const STORE_KEY = 'lascAnimalReportData_v1';
 const ROLE_KEY  = 'lascAnimalReportRole';
 const PIN_KEY   = 'lascAnimalReportAdminPin';
@@ -1559,8 +1562,21 @@ function applyRole() {
     ? (isStaff ? '🛡️ เจ้าหน้าที่ศูนย์ฯ (ยืนยันจากคลาวด์)' : '🛡️ โหมดแอดมิน (เจ้าหน้าที่)')
     : '👩‍🔬 โหมดนักวิจัย';
   document.getElementById('roleBtn').textContent = isAdmin ? '🚪 ออกจากโหมดแอดมิน' : '🔐 เข้าสู่โหมดแอดมิน';
-  document.getElementById('adminArea').classList.toggle('hidden', !isAdmin);
-  document.getElementById('adminLocked').classList.toggle('hidden', isAdmin);
+  /* ทะเบียนโครงการ = ข้อมูลของศูนย์ฯ ทั้งหมด → เปิดให้เฉพาะเจ้าหน้าที่ที่ยืนยันจากคลาวด์
+     (หรือโหมดแอดมินในเครื่องตอนยังไม่ได้เข้าสู่ระบบ สำหรับใช้งานออฟไลน์) */
+  const projOpen = projectsUnlocked();
+  document.getElementById('adminArea').classList.toggle('hidden', !projOpen);
+  document.getElementById('adminLocked').classList.toggle('hidden', projOpen);
+  if (!projOpen) {
+    const blocked = isAdmin && cloudUser && !isStaff;   /* กดโหมดแอดมินแล้วแต่ไม่ใช่บัญชีเจ้าหน้าที่ */
+    document.getElementById('adminLockedMsg').innerHTML = blocked
+      ? `บัญชี <b>${esc(cloudUser.email || '')}</b> ไม่ใช่บัญชีเจ้าหน้าที่ศูนย์สัตว์ทดลอง จึงดูทะเบียนโครงการทั้งหมดไม่ได้
+         <br>ข้อมูลโครงการที่เจ้าหน้าที่บันทึกไว้ยังอยู่ครบ — ท่านดูโครงการของท่านได้ที่แท็บ「📝 รายงานใหม่」
+         หากต้องการสิทธิ์เจ้าหน้าที่ กรุณาติดต่อศูนย์สัตว์ทดลอง`
+      : `เมนูนี้ใช้สำหรับเจ้าหน้าที่ศูนย์สัตว์ทดลองในการ<b>ดึงข้อมูลโครงการจากระบบจริยธรรมการวิจัยในสัตว์</b>
+         (animalethic.research.psu.ac.th) เข้าสู่ทะเบียนโครงการ เพื่อให้นักวิจัยเลือกเลขที่โครงการเมื่อรายงาน`;
+    document.getElementById('adminLockedBtn').classList.toggle('hidden', blocked);
+  }
   document.getElementById('tabBtn_members').classList.toggle('hidden', !isAdmin);
   if (!isAdmin && currentTab === 'members') showTab('report');
   renderMembers(); renderVets();
@@ -1678,6 +1694,15 @@ function deleteProject(id) {
 }
 function renderProjectTable() {
   const host = document.getElementById('projectTable');
+  /* ทะเบียนโครงการทั้งฉบับเปิดให้เฉพาะเจ้าหน้าที่ศูนย์ฯ (ยืนยันจากคลาวด์) หรือโหมดแอดมินในเครื่องตอนยังไม่เข้าสู่ระบบ
+     — ผู้ที่เข้าสู่ระบบอยู่แต่ไม่ใช่เจ้าหน้าที่ ถึงจะกดเข้าโหมดแอดมินด้วยรหัสในเครื่องก็ดูไม่ได้
+     ข้อมูลในทะเบียนไม่ถูกลบหรือแก้ไข เพียงแต่ไม่แสดงให้ผู้ไม่มีสิทธิ์ */
+  if (!projectsUnlocked()) {
+    host.innerHTML = `<div class="warn-box">🔒 <b>ทะเบียนโครงการเปิดให้เฉพาะเจ้าหน้าที่ศูนย์สัตว์ทดลอง</b><br>
+      ข้อมูลโครงการทั้งหมดที่เจ้าหน้าที่บันทึกไว้ยังอยู่ครบในระบบ แต่แสดงได้เฉพาะบัญชีเจ้าหน้าที่
+      (uid อยู่ใต้ <code>allowed</code>) — บัญชีนักวิจัยจะเห็นเฉพาะโครงการของตนเองในหน้า「📝 รายงานใหม่」</div>`;
+    return;
+  }
   if (!db.projects.length) {
     host.innerHTML = '<div class="empty">ยังไม่มีโครงการในทะเบียน — ใช้กล่อง「ดึงข้อมูลโครงการจากระบบจริยธรรมการวิจัยในสัตว์」ด้านบน หรือกรอกฟอร์มเพื่อเพิ่มโครงการ</div>';
     return;
@@ -4180,7 +4205,26 @@ const MEMBER_STATUS = {
   suspended: { t: 'ระงับการใช้งาน', cls: 'grey',  icon: '⏸' }
 };
 function memberOf(uidv) { return (ADMIN.members[uidv] && ADMIN.members[uidv].status) || 'pending'; }
-function pendingMemberCount() { return Object.keys(ADMIN.users).filter(u => memberOf(u) === 'pending').length; }
+/* รวม uid ทุกคนที่ปรากฏในระบบ — ทั้งที่กรอกข้อมูลลงทะเบียนแล้ว (users) และที่มีแต่สถานะ (members) */
+function allMemberUids() {
+  const s = new Set(Object.keys(ADMIN.users || {}));
+  Object.keys(ADMIN.members || {}).forEach(u => s.add(u));
+  return [...s];
+}
+function memberRecord(uidv) {
+  return Object.assign(
+    { uid: uidv, status: memberOf(uidv), m: (ADMIN.members || {})[uidv] || {} },
+    (ADMIN.users || {})[uidv] || {}
+  );
+}
+function pendingMemberCount() { return allMemberUids().filter(u => memberOf(u) === 'pending').length; }
+function memberNeedsRole(x) { return !x.role || ((x.role === 'assistant' || x.role === 'student') && !x.piName); }
+function memberRoleHtml(x) {
+  if (!x.role || !USER_ROLES[x.role]) return '<span class="badge amber">ยังไม่ระบุบทบาท</span>';
+  const need = (x.role === 'assistant' || x.role === 'student') && !x.piName;
+  return `${USER_ROLES[x.role].icon} ${esc(USER_ROLES[x.role].t)}` +
+    (need ? ' <span class="badge amber">ยังไม่ระบุ PI</span>' : '');
+}
 function renderMembers() {
   const n = pendingMemberCount();
   const b = document.getElementById('memberCount');
@@ -4192,11 +4236,22 @@ function renderMembers() {
   const f = document.getElementById('mb_status').value;
   const q = document.getElementById('mb_search').value.trim().toLowerCase();
   const rank = { pending: 0, approved: 1, suspended: 2, rejected: 3 };
-  const list = Object.keys(ADMIN.users).map(u => Object.assign({ uid: u, status: memberOf(u), m: ADMIN.members[u] || {} }, ADMIN.users[u]))
-    .filter(x => (!f || x.status === f) && (!q || [x.name, x.email, x.org, x.phone, x.piName, x.piEmail].join(' ').toLowerCase().includes(q)))
+  const all = allMemberUids().map(memberRecord);
+  const list = all
+    .filter(x => (!f || (f === 'norole' ? memberNeedsRole(x) : x.status === f)) &&
+                 (!q || [x.name, x.email, x.org, x.phone, x.piName, x.piEmail].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => (rank[a.status] - rank[b.status]) || (b.createdAt || '').localeCompare(a.createdAt || ''));
-  document.getElementById('memberStats').innerHTML = `<div class="stat-grid">${Object.entries(MEMBER_STATUS).map(([k, v]) =>
-    `<div class="stat ${k === 'pending' ? 'amber' : k === 'approved' ? 'green' : k === 'rejected' ? 'red' : ''}"><div class="n">${Object.keys(ADMIN.users).filter(u => memberOf(u) === k).length}</div><div class="l">${v.icon} ${v.t}</div></div>`).join('')}</div>`;
+  const noRole = all.filter(memberNeedsRole).length;
+  document.getElementById('memberStats').innerHTML =
+    `<div class="stat-grid">${Object.entries(MEMBER_STATUS).map(([k, v]) =>
+      `<div class="stat ${k === 'pending' ? 'amber' : k === 'approved' ? 'green' : k === 'rejected' ? 'red' : ''}"><div class="n">${all.filter(x => x.status === k).length}</div><div class="l">${v.icon} ${v.t}</div></div>`).join('')}
+      <div class="stat"><div class="n">${all.length}</div><div class="l">👥 ผู้ลงทะเบียนทั้งหมด</div></div>
+      <div class="stat ${noRole ? 'amber' : ''}"><div class="n">${noRole}</div><div class="l">⚠️ ยังไม่ระบุบทบาท / PI</div></div>
+    </div>` +
+    (noRole ? `<div class="warn-box" style="margin-top:10px">⚠️ มีผู้ลงทะเบียน <b>${noRole}</b> รายที่ยังไม่มีบทบาท/PI
+      — ผู้ใช้เหล่านี้จะเห็นเพียงเลขที่โครงการเท่านั้น กรองด้วยตัวเลือก
+      <b>「⚠️ ยังไม่ระบุบทบาท / PI」</b> แล้วกด <b>「✎ ดู / แก้ไข」</b> เพื่อเติมข้อมูลให้ หรือเลือกหลายคนแล้วกด
+      <b>「🎓 ตั้งบทบาท / PI ให้ที่เลือก」</b></div>` : '');
   if (!list.length) { host.innerHTML = '<div class="empty">ไม่มีผู้ลงทะเบียนที่ตรงกับเงื่อนไข</div>'; return; }
   host.innerHTML = `<table><thead><tr>
       <th><input type="checkbox" onchange="document.querySelectorAll('.mbChk').forEach(c=>c.checked=this.checked)"></th>
@@ -4205,22 +4260,177 @@ function renderMembers() {
       const s = MEMBER_STATUS[x.status] || MEMBER_STATUS.pending;
       return `<tr>
         <td><input type="checkbox" class="mbChk" value="${esc(x.uid)}"></td>
-        <td><b>${esc(x.name || '-')}</b></td>
-        <td>${x.role && USER_ROLES[x.role]
-              ? `${USER_ROLES[x.role].icon} ${esc(USER_ROLES[x.role].t)}`
-              : '<span class="badge amber">ยังไม่ระบุบทบาท</span>'}
+        <td><b>${esc(x.name || '(ยังไม่กรอกข้อมูลลงทะเบียน)')}</b></td>
+        <td>${memberRoleHtml(x)}
             ${x.piName ? `<div style="font-size:12.2px;color:var(--muted)">PI: ${esc(x.piName)}${x.piEmail ? ' · ' + esc(x.piEmail) : ''}</div>` : ''}</td>
         <td>${esc(x.email || '-')}</td>
         <td>${esc(x.org || '-')}<div style="font-size:12.2px;color:var(--muted)">${esc(x.phone || '')}</div></td>
         <td>${x.createdAt ? fmtStamp(x.createdAt) : '-'}</td>
         <td><span class="badge ${s.cls}">${s.icon} ${s.t}</span>${x.m.by ? `<div style="font-size:12px;color:var(--muted)">${esc(x.m.by)}</div>` : ''}</td>
         <td style="white-space:nowrap">
+          <button class="btn small secondary" onclick="openMemberModal('${esc(x.uid)}')">✎ ดู / แก้ไข</button>
           ${x.status !== 'approved' ? `<button class="btn small success" onclick="setMember('${esc(x.uid)}','approved')">✅ อนุมัติ</button>` : ''}
           ${x.status === 'pending' ? `<button class="btn small danger-outline" onclick="setMember('${esc(x.uid)}','rejected')">⛔ ไม่อนุมัติ</button>` : ''}
           ${x.status === 'approved' ? `<button class="btn small secondary" onclick="setMember('${esc(x.uid)}','suspended')">⏸ ระงับ</button>` : ''}
         </td>
       </tr>`;
     }).join('')}</tbody></table>`;
+}
+
+/* ---------- ดู / แก้ไขข้อมูลนักวิจัยรายคน (แอดมิน) ---------- */
+function memberActivity(uidv) {
+  const rs = db.reports.filter(r => r.uid === uidv);
+  const as = db.alerts.filter(a => a.uid === uidv);
+  const last = rs.map(r => r.createdAt || '').sort().pop() || '';
+  return { reports: rs.length, alerts: as.length, last };
+}
+function openMemberModal(uidv) {
+  if (!isStaff) { alert('ต้องเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่'); return; }
+  const x = memberRecord(uidv);
+  const s = MEMBER_STATUS[x.status] || MEMBER_STATUS.pending;
+  const act = memberActivity(uidv);
+  const piProjects = db.projects.filter(p =>
+    (x.role === 'pi' && ((lcTrim(p.piEmail) && lcTrim(p.piEmail) === lcTrim(x.email)) || (normName(p.piName) && normName(p.piName) === normName(x.name)))) ||
+    ((x.role === 'assistant' || x.role === 'student') &&
+      ((lcTrim(p.piEmail) && lcTrim(p.piEmail) === lcTrim(x.piEmail)) || (normName(p.piName) && normName(p.piName) === normName(x.piName))))
+  );
+  const needPi = x.role === 'assistant' || x.role === 'student';
+  document.getElementById('modalHost').innerHTML = `
+    <div class="modal-back" onclick="if(event.target===this)closeModal()">
+      <div class="modal" style="max-width:620px">
+        <div class="card-head"><h2>👤 ข้อมูลนักวิจัยที่ลงทะเบียน</h2>
+          <button class="btn small secondary" onclick="closeModal()">✕ ปิด</button></div>
+        <div class="card-body">
+          <table style="margin-top:0">
+            <tr><th style="width:38%">สถานะบัญชี</th>
+                <td><span class="badge ${s.cls}">${s.icon} ${s.t}</span>
+                  ${x.m.by ? `<div style="font-size:12.2px;color:var(--muted)">โดย ${esc(x.m.by)}${x.m.at ? ' · ' + fmtStamp(x.m.at) : ''}</div>` : ''}</td></tr>
+            <tr><th>อีเมล (บัญชีเข้าสู่ระบบ)</th><td>${esc(x.email || '-')}</td></tr>
+            <tr><th>ลงทะเบียนเมื่อ</th><td>${x.createdAt ? fmtStamp(x.createdAt) : '-'}</td></tr>
+            <tr><th>รายงานที่บันทึกไว้</th><td>${act.reports} รายการ · แจ้งเหตุ ${act.alerts} เรื่อง${act.last ? `<div style="font-size:12.2px;color:var(--muted)">รายงานล่าสุด ${fmtStamp(act.last)}</div>` : ''}</td></tr>
+            <tr><th>โครงการที่เห็นรายละเอียดได้</th>
+                <td>${piProjects.length
+                      ? piProjects.map(p => `<div>${esc(p.projectNo)} — ${esc((p.projectName || '').slice(0, 50))}</div>`).join('')
+                      : '<span style="color:var(--muted)">ยังจับคู่กับโครงการใดไม่ได้</span>'}</td></tr>
+            <tr><th>รหัสผู้ใช้ (uid)</th><td style="font-size:12px;color:var(--muted);word-break:break-all">${esc(x.uid)}</td></tr>
+          </table>
+          <form onsubmit="saveMemberProfile(event,'${esc(x.uid)}')">
+            <div class="grid grid-2">
+              <label class="field">ชื่อ–สกุล <span class="req">*</span>
+                <input type="text" id="mp_name" required value="${esc(x.name || '')}"></label>
+              <label class="field">หน่วยงาน / คณะ
+                <input type="text" id="mp_org" value="${esc(x.org || '')}"></label>
+            </div><br>
+            <div class="grid grid-2">
+              <label class="field">เบอร์โทร
+                <input type="tel" id="mp_phone" value="${esc(x.phone || '')}"></label>
+              <label class="field">บทบาทในงานวิจัย <span class="req">*</span>
+                <select id="mp_role" required onchange="onPickMemberRole()">
+                  <option value="">— เลือกบทบาท —</option>
+                  ${Object.entries(USER_ROLES).map(([k, v]) =>
+                    `<option value="${k}"${x.role === k ? ' selected' : ''}>${v.icon} ${v.t}</option>`).join('')}
+                </select></label>
+            </div>
+            <div id="mp_piBox" class="${needPi ? '' : 'hidden'}"><br>
+              <div class="grid grid-2">
+                <label class="field">ชื่อหัวหน้าโครงการ (PI) ที่สังกัด <span class="req">*</span>
+                  <input type="text" id="mp_piName" value="${esc(x.piName || '')}" placeholder="เช่น รศ.ดร.สมชาย ใจดี"></label>
+                <label class="field">อีเมลของ PI
+                  <input type="email" id="mp_piEmail" value="${esc(x.piEmail || '')}" placeholder="pi@psu.ac.th"></label>
+              </div>
+              <div class="hint">พิมพ์ชื่อ PI ให้ตรงกับที่อยู่ในทะเบียนโครงการ (ระบบตัดคำนำหน้า ศ./รศ./ผศ./ดร. และช่องว่างให้อัตโนมัติ)
+                — ใส่อีเมล PI ด้วยจะจับคู่ได้แม่นยำที่สุด</div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn success">💾 บันทึกข้อมูลนักวิจัย</button>
+              <button type="button" class="btn secondary" onclick="closeModal()">ยกเลิก</button>
+            </div>
+            <div class="hint">แอดมินแก้ไขข้อมูลนี้แทนนักวิจัยได้ สำหรับผู้ที่ลงทะเบียนไว้ก่อนระบบมีช่อง「บทบาท / PI」</div>
+          </form>
+        </div>
+      </div>
+    </div>`;
+}
+function onPickMemberRole() {
+  const role = document.getElementById('mp_role').value;
+  const need = role === 'assistant' || role === 'student';
+  document.getElementById('mp_piBox').classList.toggle('hidden', !need);
+  document.getElementById('mp_piName').required = need;
+}
+async function saveMemberProfile(ev, uidv) {
+  ev.preventDefault();
+  if (!isStaff || !cloudUser) { alert('ต้องเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่'); return; }
+  const old = (ADMIN.users || {})[uidv] || {};
+  const role = document.getElementById('mp_role').value;
+  const piName = document.getElementById('mp_piName').value.trim();
+  if ((role === 'assistant' || role === 'student') && !piName) {
+    alert('กรุณาระบุชื่อหัวหน้าโครงการ (PI) ที่สังกัด');
+    document.getElementById('mp_piName').focus();
+    return;
+  }
+  const profile = {
+    name:  document.getElementById('mp_name').value.trim(),
+    email: old.email || '',
+    org:   document.getElementById('mp_org').value.trim(),
+    phone: document.getElementById('mp_phone').value.trim(),
+    role:  role,
+    piName:  role === 'pi' ? '' : piName,
+    piEmail: role === 'pi' ? '' : document.getElementById('mp_piEmail').value.trim(),
+    createdAt: old.createdAt || new Date().toISOString()
+  };
+  try {
+    await fb.set(fb.ref(fb.rtdb, cloudPath('users/' + uidv)), profile);
+    closeModal();
+    toast('บันทึกข้อมูล ' + (profile.name || '') + ' แล้ว');
+  } catch (e) { cloudFail(e); }
+}
+/* ตั้งบทบาท/PI ให้หลายคนพร้อมกัน — ใช้ย้ายข้อมูลผู้ลงทะเบียนเดิมทั้งทีมในครั้งเดียว */
+async function setPiForSelected() {
+  if (!isStaff || !cloudUser) { alert('ต้องเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่'); return; }
+  const ids = [...document.querySelectorAll('.mbChk:checked')].map(c => c.value);
+  if (!ids.length) { alert('ยังไม่ได้เลือกผู้ลงทะเบียน'); return; }
+  const role = (prompt('ตั้งบทบาทให้ ' + ids.length + ' คน — พิมพ์ pi / assistant / student', 'assistant') || '').trim();
+  if (!role) return;
+  if (!USER_ROLES[role]) { alert('บทบาทต้องเป็น pi, assistant หรือ student เท่านั้น'); return; }
+  let piName = '', piEmail = '';
+  if (role !== 'pi') {
+    piName = (prompt('ชื่อหัวหน้าโครงการ (PI) ที่ทั้ง ' + ids.length + ' คนสังกัด', '') || '').trim();
+    if (!piName) { alert('ต้องระบุชื่อ PI'); return; }
+    piEmail = (prompt('อีเมลของ PI (ไม่บังคับ แต่ช่วยให้จับคู่แม่นยำ)', '') || '').trim();
+  }
+  const names = ids.map(u => (memberRecord(u).name || memberRecord(u).email || u)).join('\n');
+  if (!confirm(`ตั้งบทบาท「${USER_ROLES[role].t}」${role !== 'pi' ? ' · PI: ' + piName : ''}\nให้ ${ids.length} คนนี้?\n\n${names}`)) return;
+  let ok = 0, fail = 0;
+  for (const u of ids) {
+    const old = (ADMIN.users || {})[u] || {};
+    if (!old.name && !old.email) { fail++; continue; }   /* ยังไม่เคยกรอกข้อมูลลงทะเบียน */
+    try {
+      await fb.set(fb.ref(fb.rtdb, cloudPath('users/' + u)), {
+        name: old.name || '', email: old.email || '', org: old.org || '', phone: old.phone || '',
+        role, piName: role === 'pi' ? '' : piName, piEmail: role === 'pi' ? '' : piEmail,
+        createdAt: old.createdAt || new Date().toISOString()
+      });
+      ok++;
+    } catch (e) { fail++; }
+  }
+  toast(`ตั้งบทบาท/PI สำเร็จ ${ok} คน${fail ? ' · ไม่สำเร็จ ' + fail + ' คน' : ''}`);
+}
+function exportMembersCSV() {
+  if (!isStaff) { alert('ต้องเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่'); return; }
+  const all = allMemberUids().map(memberRecord);
+  if (!all.length) { alert('ยังไม่มีผู้ลงทะเบียนในระบบ'); return; }
+  const head = ['ชื่อ–สกุล','อีเมล','บทบาท','ชื่อ PI ที่สังกัด','อีเมล PI','หน่วยงาน / คณะ','เบอร์โทร',
+    'สถานะบัญชี','ผู้อนุมัติ','อนุมัติเมื่อ','ลงทะเบียนเมื่อ','จำนวนรายงาน','จำนวนการแจ้งเหตุ','uid'];
+  const rows = all.map(x => {
+    const act = memberActivity(x.uid);
+    return [x.name || '', x.email || '', (USER_ROLES[x.role] || {}).t || '', x.piName || '', x.piEmail || '',
+      x.org || '', x.phone || '', (MEMBER_STATUS[x.status] || {}).t || '', x.m.by || '',
+      x.m.at ? x.m.at.slice(0, 10) : '', x.createdAt ? x.createdAt.slice(0, 10) : '',
+      act.reports, act.alerts, x.uid].map(csvCell).join(',');
+  });
+  downloadBlob('﻿' + [head.map(csvCell).join(','), ...rows].join('\r\n'),
+    `lasc-members-${todayISO()}.csv`, 'text/csv;charset=utf-8');
+  toast(`ส่งออกรายชื่อผู้ลงทะเบียน ${all.length} คนแล้ว`);
 }
 async function setMember(uidv, status) {
   if (!isStaff || !cloudUser) { alert('ต้องเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่'); return; }
