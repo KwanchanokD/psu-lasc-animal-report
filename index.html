@@ -1344,7 +1344,7 @@
 'use strict';
 
 /* ==================== ค่าคงที่ / ข้อมูลอ้างอิง ==================== */
-const APP_VERSION = '1.8.0 (5 พ.ย. 2569)';
+const APP_VERSION = '1.8.1 (6 พ.ย. 2569)';
 const STORE_KEY = 'lascAnimalReportData_v1';
 const ROLE_KEY  = 'lascAnimalReportRole';
 const PIN_KEY   = 'lascAnimalReportAdminPin';
@@ -3773,7 +3773,17 @@ async function doSignup(ev) {
   finally { signingUp = false; btn.disabled = false; btn.textContent = '📝 ลงทะเบียน'; }
 }
 async function saveMyProfile(uidv, profile) {
-  await fb.set(fb.ref(fb.rtdb, cloudPath('users/' + uidv)), profile);
+  try {
+    await fb.set(fb.ref(fb.rtdb, cloudPath('users/' + uidv)), profile);
+  } catch (e) {
+    /* กฎฐานข้อมูลรุ่นเก่ายังไม่รู้จักฟิลด์ role/piName/piEmail — บันทึกแบบเดิมไว้ก่อน
+       เพื่อไม่ให้การลงทะเบียนล้มทั้งหมด แล้วแจ้งให้เจ้าหน้าที่อัปเดตกฎ (firebase-rules.json) */
+    const legacy = { name: profile.name, email: profile.email, org: profile.org,
+                     phone: profile.phone, createdAt: profile.createdAt };
+    await fb.set(fb.ref(fb.rtdb, cloudPath('users/' + uidv)), legacy);
+    profile = legacy;
+    toast('บันทึกข้อมูลลงทะเบียนแล้ว แต่ยังเก็บ「บทบาท/PI ที่สังกัด」ไม่ได้ — กรุณาแจ้งเจ้าหน้าที่ให้อัปเดตกฎฐานข้อมูล');
+  }
   myProfile = profile;
   fillReporterFromProfile(profile);
   /* บทบาท/PI เปลี่ยน → สิทธิ์เห็นรายละเอียดโครงการเปลี่ยนตาม ต้องวาดรายการโครงการใหม่ */
