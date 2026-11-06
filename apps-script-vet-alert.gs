@@ -66,6 +66,7 @@ var CONFIG = {
 
 var MAX_AGE_MIN = 30;             /* แจ้งเฉพาะเรื่องที่บันทึกภายใน 30 นาที */
 var MAX_GUEST_PER_10MIN = 10;     /* กันการแจ้งรัว ๆ จากผู้แจ้งที่ยังไม่ได้เป็นสมาชิก */
+var MAX_TEST_PER_DAY = 20;        /* เพดานการยิง「ทดสอบการแจ้งเตือน」ต่อวัน */
 
 /* ==================== ตัวช่วยพื้นฐาน ==================== */
 function cfg(k) {
@@ -291,6 +292,11 @@ function handleApp(p) {
       if (vid && !ID.test(vid)) return done(false, { error: 'bad vetId' });
       var minute = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
       if (!once('test_' + (vid || 'all') + '_' + minute)) return done(true, { skipped: 'ทดสอบไปแล้วในนาทีนี้ — รอสักครู่แล้วลองใหม่' });
+      /* เพดานต่อวัน — รหัสเชื่อมต่อ (ALERT_KEY) เปิดเผยอยู่ในหน้าเว็บ จึงกันไม่ให้ใครยิงทดสอบรัวใส่สัตวแพทย์ทั้งวัน */
+      var dayKey = 'testRate/' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      var dn = Number((fbGet('notifyLog/' + dayKey) || {}).n || 0);
+      if (dn >= MAX_TEST_PER_DAY) return done(true, { skipped: 'ทดสอบครบ ' + MAX_TEST_PER_DAY + ' ครั้งแล้ววันนี้ — ลองใหม่พรุ่งนี้' });
+      fbPut('notifyLog/' + dayKey, { n: dn + 1 });
       var list = vid ? [fbGet('vets/' + vid)].filter(String) : activeVets(null);
       if (!list.length) return done(true, { skipped: 'ไม่พบผู้รับแจ้ง' });
       list.forEach(function (v) {

@@ -4,8 +4,10 @@
     ".write": false,
 
     "allowed": {
-      ".read": "auth != null",
-      ".write": false
+      ".write": false,
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid"
+      }
     },
 
     "animalReport": {
@@ -85,7 +87,7 @@
             "detail":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 4000" },
             "firstAid": { ".validate": "newData.isString() && newData.val().length <= 3000" },
             "photos": {
-              "$i": { ".validate": "$i.matches(/^[0-2]$/) && newData.isString() && newData.val().length <= 900000 && newData.val().beginsWith('data:image/')" }
+              "$i": { ".validate": "$i.matches(/^[0-2]$/) && newData.isString() && newData.val().length <= 500000 && newData.val().beginsWith('data:image/')" }
             }
           }
         }
@@ -110,7 +112,7 @@
           "firstAid": { ".validate": "newData.isString() && newData.val().length <= 3000" },
           "createdAt": { ".validate": "newData.isString() && newData.val().length <= 40" },
           "photos": {
-            "$i": { ".validate": "$i.matches(/^[0-2]$/) && newData.isString() && newData.val().length <= 900000 && newData.val().beginsWith('data:image/')" }
+            "$i": { ".validate": "$i.matches(/^[0-2]$/) && newData.isString() && newData.val().length <= 500000 && newData.val().beginsWith('data:image/')" }
           }
         }
       },

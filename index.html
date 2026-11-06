@@ -1347,7 +1347,7 @@
 'use strict';
 
 /* ==================== ค่าคงที่ / ข้อมูลอ้างอิง ==================== */
-const APP_VERSION = '1.8.2 (6 พ.ย. 2569)';
+const APP_VERSION = '1.8.3 (6 พ.ย. 2569)';
 const STORE_KEY = 'lascAnimalReportData_v1';
 const ROLE_KEY  = 'lascAnimalReportRole';
 const PIN_KEY   = 'lascAnimalReportAdminPin';
@@ -2894,6 +2894,7 @@ function openMailto(url) {
 const MAX_PHOTOS = 3;
 const PHOTO_MAX_PX = 1280;      /* ย่อด้านยาวสุดเหลือเท่านี้ */
 const PHOTO_MAX_BYTES = 250000; /* ขนาดต่อรูปหลังย่อ (โดยประมาณ) */
+const PHOTO_MAX_CHARS = 500000; /* เพดานเด็ดขาดต่อรูป ต้องไม่เกินที่กฎฐานข้อมูลยอมรับ */
 let alertPhotos = [];
 
 /* ย่อรูปด้วย canvas ให้เล็กลงก่อนเก็บ — คืนค่าเป็น data URL (JPEG) */
@@ -2917,6 +2918,18 @@ function compressImage(file) {
         while (url.length * 0.75 > PHOTO_MAX_BYTES && q > 0.35) {
           q -= 0.1;
           url = cv.toDataURL('image/jpeg', q);
+        }
+        /* กันรูปที่ยังใหญ่เกินแม้ลดคุณภาพจนต่ำสุดแล้ว — ย่อขนาดภาพลงอีกจนไม่เกินเพดานของกฎฐานข้อมูล
+           (ถ้าไม่ทำ รูปอาจถูกฐานข้อมูลปฏิเสธตอนส่ง ซึ่งไม่ควรเกิดตอนแจ้งเหตุฉุกเฉิน) */
+        let guard = 0;
+        while (url.length > PHOTO_MAX_CHARS && guard++ < 6 && cv.width > 240) {
+          cv.width = Math.round(cv.width * 0.75);
+          cv.height = Math.round(cv.height * 0.75);
+          const c2 = cv.getContext('2d');
+          c2.fillStyle = '#fff';
+          c2.fillRect(0, 0, cv.width, cv.height);
+          c2.drawImage(img, 0, 0, cv.width, cv.height);
+          url = cv.toDataURL('image/jpeg', 0.6);
         }
         resolve(url);
       };
@@ -4666,6 +4679,22 @@ openTabFromURL();
       import(V + 'firebase-database.js')
     ]);
     const app = appMod.initializeApp(cfg);
+
+    /* App Check — กันการเขียนฐานข้อมูลจากสคริปต์ภายนอกที่ไม่ได้มาจากหน้าเว็บนี้
+       (สำคัญกับ guestAlerts ซึ่งเปิดให้เขียนได้โดยไม่ต้องเข้าสู่ระบบ เพื่อแจ้งเหตุฉุกเฉิน)
+       จะทำงานเมื่อใส่ reCAPTCHA v3 site key ไว้ใน firebase-config.js เป็น window.LASC_APPCHECK_KEY
+       ถ้ายังไม่ใส่ ระบบทำงานได้ตามปกติทุกอย่าง เพียงแต่ยังไม่มีเกราะชั้นนี้ */
+    const acKey = window.LASC_APPCHECK_KEY;
+    if (acKey) {
+      try {
+        const ac = await import(V + 'firebase-app-check.js');
+        ac.initializeAppCheck(app, {
+          provider: new ac.ReCaptchaV3Provider(acKey),
+          isTokenAutoRefreshEnabled: true
+        });
+      } catch (e) { console.warn('App Check ไม่พร้อมใช้งาน:', e && e.message); }
+    }
+
     const auth = authMod.getAuth(app);
     try { await authMod.setPersistence(auth, authMod.browserLocalPersistence); } catch (e) {}
     window.onFirebaseReady({
