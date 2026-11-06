@@ -182,7 +182,59 @@ function activeVets(filter) {
 }
 
 /* ==================== รับคำขอ ==================== */
-function doGet() {
+function doGet(e) {
+  /* โหมดตรวจสุขภาพ: ...exec?check=<ALERT_KEY>
+     ใช้ยืนยันว่าหลังเปลี่ยนค่าลับใหม่แล้ว ตัวกลางยังต่อกับ Firebase และ LINE ได้จริง
+     ตอบกลับเป็นค่า จริง/เท็จ และจำนวนเท่านั้น — ไม่คืนค่าลับใด ๆ และไม่ส่งข้อความหาใคร */
+  var key = e && e.parameter && e.parameter.check;
+  if (key && cfg('ALERT_KEY') && String(key) === cfg('ALERT_KEY')) {
+    var r = {
+      ok: true,
+      checkedAt: new Date().toISOString(),
+      config: {
+        fbUrl:     !!cfg('FB_DB_URL'),
+        fbSecret:  !!cfg('FB_DB_SECRET'),
+        alertKey:  !!cfg('ALERT_KEY'),
+        lineToken: !!cfg('LINE_TOKEN'),
+        appUrl:    !!cfg('APP_URL'),
+        srcDb:     !!cfg('SRC_DB_URL')
+      },
+      firebase: { readable: false, error: '' },
+      line:     { valid: false, error: '' },
+      vets:     { total: 0, active: 0, withLine: 0, withEmail: 0 },
+      projects: 0
+    };
+    /* อ่าน Firebase ด้วย secret ปัจจุบัน — ถ้า secret เก่าถูกเพิกถอนแล้วจะล้มที่นี่ */
+    try {
+      var s = fbGet('settings/public');
+      r.firebase.readable = !!s;
+      var vs = fbGet('vets') || {};
+      for (var k in vs) {
+        var v = vs[k]; if (!v) continue;
+        r.vets.total++;
+        if (v.active !== false) r.vets.active++;
+        if (v.lineId) r.vets.withLine++;
+        if (v.email) r.vets.withEmail++;
+      }
+      var ps = fbGet('projects') || {};
+      for (var pk in ps) r.projects++;
+    } catch (err) { r.firebase.error = String(err && err.message || err).slice(0, 200); }
+    /* ตรวจ LINE token ด้วย endpoint ที่อ่านข้อมูลบอทเท่านั้น ไม่ส่งข้อความ */
+    if (cfg('LINE_TOKEN')) {
+      try {
+        var res = UrlFetchApp.fetch('https://api.line.me/v2/bot/info', {
+          method: 'get',
+          headers: { Authorization: 'Bearer ' + cfg('LINE_TOKEN') },
+          muteHttpExceptions: true
+        });
+        r.line.valid = res.getResponseCode() === 200;
+        if (!r.line.valid) r.line.error = 'HTTP ' + res.getResponseCode();
+      } catch (err2) { r.line.error = String(err2 && err2.message || err2).slice(0, 200); }
+    }
+    r.ready = r.config.fbUrl && r.config.fbSecret && r.config.alertKey &&
+              r.firebase.readable && (!cfg('LINE_TOKEN') || r.line.valid);
+    return jsonOut(r);
+  }
   return jsonOut({ ok: true, service: 'PSU:LASC veterinary alert relay (Apps Script)' });
 }
 function doPost(e) {
