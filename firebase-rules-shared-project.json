@@ -4,6 +4,7 @@
     ".write": false,
 
     "allowed": {
+      ".read":  "auth != null && root.child('allowed').child(auth.uid).exists()",
       ".write": false,
       "$uid": {
         ".read": "auth != null && auth.uid == $uid"
@@ -130,7 +131,7 @@
             "email":     { ".validate": "newData.isString() && newData.val().length <= 120" },
             "org":       { ".validate": "newData.isString() && newData.val().length <= 200" },
             "phone":     { ".validate": "newData.isString() && newData.val().length <= 40" },
-            "role":      { ".validate": "newData.isString() && (newData.val() == '' || newData.val().matches(/^(pi|assistant|student)$/))" },
+            "role":      { ".validate": "newData.isString() && (newData.val() == '' || newData.val().matches(/^(pi|assistant|student|staff)$/))" },
             "piName":    { ".validate": "newData.isString() && newData.val().length <= 150" },
             "piEmail":   { ".validate": "newData.isString() && newData.val().length <= 120" },
             "createdAt": { ".validate": "newData.isString() && newData.val().length <= 40" },

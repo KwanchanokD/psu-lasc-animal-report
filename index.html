@@ -1308,6 +1308,7 @@
             <option value="pi">🎓 หัวหน้าโครงการวิจัย (PI) / Principal Investigator</option>
             <option value="assistant">🧑‍🔬 ผู้ช่วยวิจัย / Research assistant</option>
             <option value="student">🎒 นักศึกษา / Student</option>
+            <option value="staff">🛡️ เจ้าหน้าที่ศูนย์สัตว์ทดลอง / LASC staff</option>
           </select>
         </label>
         <div id="su_piBox" class="hidden">
@@ -1349,7 +1350,7 @@
 'use strict';
 
 /* ==================== ค่าคงที่ / ข้อมูลอ้างอิง ==================== */
-const APP_VERSION = '1.8.4 (9 พ.ย. 2569)';
+const APP_VERSION = '1.8.5 (9 พ.ย. 2569)';
 const STORE_KEY = 'lascAnimalReportData_v1';
 const ROLE_KEY  = 'lascAnimalReportRole';
 const PIN_KEY   = 'lascAnimalReportAdminPin';
@@ -1447,9 +1448,12 @@ function projectById(id) { return db.projects.find(p => p.id === id) || null; }
    เจ้าหน้าที่ศูนย์ฯ · หัวหน้าโครงการ (PI) เจ้าของโครงการ · และผู้ช่วยวิจัย/นักศึกษาที่ระบุว่าอยู่ใต้ PI คนนั้น
    คนอื่นเห็นเฉพาะ「เลขที่โครงการ」เท่านั้น */
 const USER_ROLES = {
-  pi:        { t: 'หัวหน้าโครงการวิจัย (PI)', en: 'Principal Investigator', icon: '🎓' },
-  assistant: { t: 'ผู้ช่วยวิจัย',             en: 'Research assistant',     icon: '🧑‍🔬' },
-  student:   { t: 'นักศึกษา',                 en: 'Student',                icon: '🎒' }
+  pi:        { t: 'หัวหน้าโครงการวิจัย (PI)',   en: 'Principal Investigator', icon: '🎓' },
+  assistant: { t: 'ผู้ช่วยวิจัย',               en: 'Research assistant',     icon: '🧑‍🔬' },
+  student:   { t: 'นักศึกษา',                   en: 'Student',                icon: '🎒' },
+  /* บทบาทนี้เป็นเพียงข้อมูลประกอบในทะเบียนสมาชิก ไม่ได้ให้สิทธิ์เจ้าหน้าที่โดยอัตโนมัติ
+     สิทธิ์จริงมาจาก uid ที่อยู่ใต้โหนด allowed เท่านั้น (ป้องกันการแอบอ้างบทบาท) */
+  staff:     { t: 'เจ้าหน้าที่ศูนย์สัตว์ทดลอง', en: 'LASC staff',             icon: '🛡️' }
 };
 const NAME_TITLES = [
   'ศาสตราจารย์เกียรติคุณ', 'ศาสตราจารย์', 'รองศาสตราจารย์', 'ผู้ช่วยศาสตราจารย์',
@@ -3703,7 +3707,7 @@ let cloudProjectsSeen = false; // เคยได้รับทะเบีย�
 let cloudReportsSeen = false;  // เคยได้รับรายงานที่ไม่ว่างจากคลาวด์แล้วหรือยัง
 let cloudAlertsSeen = false;   // เคยได้รับเรื่องแจ้งเหตุที่ไม่ว่างจากคลาวด์แล้วหรือยัง
 let alertSrc = { mine: [], all: [], guest: [] };
-const ADMIN = { users: {}, members: {}, vets: {}, vetReq: {} };
+const ADMIN = { users: {}, members: {}, vets: {}, vetReq: {}, allowed: {} };
 
 function cloudReady() { return !!(fb && cloudUser && syncOn && !applyingSnapshot); }
 function cloudPath(p) { return CLOUD_ROOT + '/' + p; }
@@ -4205,6 +4209,9 @@ async function beginSync(user) {
           await fb.set(fb.ref(fb.rtdb, cloudPath('settings/public')), vetPublicSettings());
         }
       } catch (e) {}
+      /* รายชื่อ uid ที่มีสิทธิ์เจ้าหน้าที่จริง — ใช้แสดงในทะเบียนสมาชิกว่าใครได้สิทธิ์แล้วบ้าง
+         (อ่านได้เฉพาะบัญชีเจ้าหน้าที่ ตามกฎของโหนด allowed) */
+      watch('allowed',                s => { ADMIN.allowed = s.val() || {}; renderMembers(); });
       watch(cloudPath('users'),       s => { ADMIN.users   = s.val() || {}; renderMembers(); });
       watch(cloudPath('members'),     s => { ADMIN.members = s.val() || {}; renderMembers(); });
       watch(cloudPath('vets'),        s => { ADMIN.vets    = s.val() || {}; renderVets(); });
@@ -4263,11 +4270,16 @@ function memberRecord(uidv) {
 }
 function pendingMemberCount() { return allMemberUids().filter(u => memberOf(u) === 'pending').length; }
 function memberNeedsRole(x) { return !x.role || ((x.role === 'assistant' || x.role === 'student') && !x.piName); }
+/* มีสิทธิ์เจ้าหน้าที่จริงหรือไม่ = uid อยู่ใต้โหนด allowed (ไม่ใช่แค่เลือกบทบาทเอง) */
+function hasStaffPrivilege(uidv) { return !!(ADMIN.allowed && ADMIN.allowed[uidv]); }
 function memberRoleHtml(x) {
   if (!x.role || !USER_ROLES[x.role]) return '<span class="badge amber">ยังไม่ระบุบทบาท</span>';
   const need = (x.role === 'assistant' || x.role === 'student') && !x.piName;
-  return `${USER_ROLES[x.role].icon} ${esc(USER_ROLES[x.role].t)}` +
-    (need ? ' <span class="badge amber">ยังไม่ระบุ PI</span>' : '');
+  let out = `${USER_ROLES[x.role].icon} ${esc(USER_ROLES[x.role].t)}`;
+  if (need) out += ' <span class="badge amber">ยังไม่ระบุ PI</span>';
+  if (hasStaffPrivilege(x.uid)) out += ' <span class="badge green">มีสิทธิ์เจ้าหน้าที่</span>';
+  else if (x.role === 'staff') out += ' <span class="badge amber">ยังไม่ได้รับสิทธิ์เจ้าหน้าที่</span>';
+  return out;
 }
 function renderMembers() {
   const n = pendingMemberCount();
@@ -4356,6 +4368,13 @@ function openMemberModal(uidv) {
                 <td>${piProjects.length
                       ? piProjects.map(p => `<div>${esc(p.projectNo)} — ${esc((p.projectName || '').slice(0, 50))}</div>`).join('')
                       : '<span style="color:var(--muted)">ยังจับคู่กับโครงการใดไม่ได้</span>'}</td></tr>
+            <tr><th>สิทธิ์เจ้าหน้าที่ศูนย์ฯ</th>
+                <td>${hasStaffPrivilege(x.uid)
+                      ? '<span class="badge green">✅ มีสิทธิ์</span> เห็นทะเบียนโครงการทั้งหมด จัดการสมาชิกและทีมสัตวแพทย์ได้'
+                      : '<span class="badge grey">— ไม่มีสิทธิ์</span> เป็นบัญชีผู้ใช้ทั่วไป'}
+                  <div style="font-size:12.2px;color:var(--muted);margin-top:3px">สิทธิ์นี้ให้โดยการเพิ่ม uid ด้านล่างไว้ใต้โหนด
+                    <code>allowed</code> ใน Firebase Console เท่านั้น — การเลือกบทบาท「เจ้าหน้าที่ศูนย์สัตว์ทดลอง」
+                    ในหน้าลงทะเบียนเป็นเพียงข้อมูลประกอบ ไม่ได้ให้สิทธิ์โดยอัตโนมัติ</div></td></tr>
             <tr><th>รหัสผู้ใช้ (uid)</th><td style="font-size:12px;color:var(--muted);word-break:break-all">${esc(x.uid)}</td></tr>
           </table>
           <form onsubmit="saveMemberProfile(event,'${esc(x.uid)}')">
@@ -4463,11 +4482,12 @@ function exportMembersCSV() {
   if (!isStaff) { alert('ต้องเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่'); return; }
   const all = allMemberUids().map(memberRecord);
   if (!all.length) { alert('ยังไม่มีผู้ลงทะเบียนในระบบ'); return; }
-  const head = ['ชื่อ–สกุล','อีเมล','บทบาท','ชื่อ PI ที่สังกัด','อีเมล PI','หน่วยงาน / คณะ','เบอร์โทร',
+  const head = ['ชื่อ–สกุล','อีเมล','บทบาท','สิทธิ์เจ้าหน้าที่','ชื่อ PI ที่สังกัด','อีเมล PI','หน่วยงาน / คณะ','เบอร์โทร',
     'สถานะบัญชี','ผู้อนุมัติ','อนุมัติเมื่อ','ลงทะเบียนเมื่อ','จำนวนรายงาน','จำนวนการแจ้งเหตุ','uid'];
   const rows = all.map(x => {
     const act = memberActivity(x.uid);
-    return [x.name || '', x.email || '', (USER_ROLES[x.role] || {}).t || '', x.piName || '', x.piEmail || '',
+    return [x.name || '', x.email || '', (USER_ROLES[x.role] || {}).t || '',
+      hasStaffPrivilege(x.uid) ? 'มีสิทธิ์' : '', x.piName || '', x.piEmail || '',
       x.org || '', x.phone || '', (MEMBER_STATUS[x.status] || {}).t || '', x.m.by || '',
       x.m.at ? x.m.at.slice(0, 10) : '', x.createdAt ? x.createdAt.slice(0, 10) : '',
       act.reports, act.alerts, x.uid].map(csvCell).join(',');
