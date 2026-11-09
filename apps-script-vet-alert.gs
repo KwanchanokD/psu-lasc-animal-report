@@ -199,8 +199,18 @@ function doGet(e) {
         appUrl:    !!cfg('APP_URL'),
         srcDb:     !!cfg('SRC_DB_URL')
       },
+      values: {                                   /* ค่าที่ไม่ใช่ความลับ แสดงไว้ให้ตรวจความถูกต้อง */
+        fbRoot:     cfg('FB_ROOT'),
+        appUrl:     cfg('APP_URL'),
+        senderName: cfg('SENDER_NAME'),
+        replyTo:    cfg('REPLY_TO'),
+        srcPath:    cfg('SRC_PATH')
+      },
       firebase: { readable: false, error: '' },
-      line:     { valid: false, error: '' },
+      line:     { valid: false, error: '', botId: '', webhook: '', webhookActive: null },
+      source:   { readable: null, projects: 0, error: '' },
+      triggers: { syncProjects: null, list: [], error: '' },
+      mailQuota: null,
       vets:     { total: 0, active: 0, withLine: 0, withEmail: 0 },
       projects: 0
     };
@@ -221,16 +231,57 @@ function doGet(e) {
     } catch (err) { r.firebase.error = String(err && err.message || err).slice(0, 200); }
     /* ตรวจ LINE token ด้วย endpoint ที่อ่านข้อมูลบอทเท่านั้น ไม่ส่งข้อความ */
     if (cfg('LINE_TOKEN')) {
+      var lineHdr = { Authorization: 'Bearer ' + cfg('LINE_TOKEN') };
       try {
         var res = UrlFetchApp.fetch('https://api.line.me/v2/bot/info', {
-          method: 'get',
-          headers: { Authorization: 'Bearer ' + cfg('LINE_TOKEN') },
-          muteHttpExceptions: true
+          method: 'get', headers: lineHdr, muteHttpExceptions: true
         });
         r.line.valid = res.getResponseCode() === 200;
-        if (!r.line.valid) r.line.error = 'HTTP ' + res.getResponseCode();
+        if (r.line.valid) {
+          var info = JSON.parse(res.getContentText() || '{}');
+          r.line.botId = String(info.basicId || '');     /* @xxxxx ของ LINE OA — ไม่ใช่ความลับ */
+        } else { r.line.error = 'HTTP ' + res.getResponseCode(); }
       } catch (err2) { r.line.error = String(err2 && err2.message || err2).slice(0, 200); }
+      /* webhook ตั้งไว้ถูกต้องไหม — ถ้าไม่ตั้ง สัตวแพทย์จะลงทะเบียนรับแจ้งผ่าน LINE ไม่ได้ */
+      try {
+        var wh = UrlFetchApp.fetch('https://api.line.me/v2/bot/channel/webhook/endpoint', {
+          method: 'get', headers: lineHdr, muteHttpExceptions: true
+        });
+        if (wh.getResponseCode() === 200) {
+          var w = JSON.parse(wh.getContentText() || '{}');
+          r.line.webhook = String(w.endpoint || '');
+          r.line.webhookActive = w.active === true;
+        }
+      } catch (err3) {}
     }
+    /* อ่านทะเบียนโครงการต้นทาง (psu-lasc-app) ได้ไหม — ใช้ตอนซิงก์โครงการ */
+    if (cfg('SRC_DB_URL') && cfg('SRC_DB_SECRET')) {
+      try {
+        var su = cfg('SRC_DB_URL').replace(/\/$/, '') + '/' + cfg('SRC_PATH') +
+                 '.json?shallow=true&auth=' + encodeURIComponent(cfg('SRC_DB_SECRET'));
+        var sr = UrlFetchApp.fetch(su, { muteHttpExceptions: true });
+        if (sr.getResponseCode() === 200) {
+          r.source.readable = true;
+          var sj = JSON.parse(sr.getContentText() || 'null') || {};
+          for (var sk in sj) r.source.projects++;
+        } else {
+          r.source.readable = false;
+          r.source.error = 'HTTP ' + sr.getResponseCode();
+        }
+      } catch (err4) { r.source.readable = false; r.source.error = String(err4 && err4.message || err4).slice(0, 200); }
+    }
+    /* ทริกเกอร์ซิงก์โครงการอัตโนมัติทุก 6 ชั่วโมง (ต้องมีสิทธิ์ script.scriptapp) */
+    try {
+      var trs = ScriptApp.getProjectTriggers();
+      r.triggers.syncProjects = false;
+      trs.forEach(function (t) {
+        var fn = t.getHandlerFunction();
+        r.triggers.list.push(fn);
+        if (fn === 'syncProjectsNow') r.triggers.syncProjects = true;
+      });
+    } catch (err5) { r.triggers.error = 'ไม่มีสิทธิ์อ่านทริกเกอร์ (ต้องเพิ่ม scope script.scriptapp)'; }
+    /* โควตาอีเมลที่เหลือวันนี้ */
+    try { r.mailQuota = MailApp.getRemainingDailyQuota(); } catch (err6) {}
     r.ready = r.config.fbUrl && r.config.fbSecret && r.config.alertKey &&
               r.firebase.readable && (!cfg('LINE_TOKEN') || r.line.valid);
     return jsonOut(r);
