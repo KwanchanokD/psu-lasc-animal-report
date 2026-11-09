@@ -344,6 +344,8 @@
     <button class="btn ghost small hidden" id="installBtn" onclick="installApp()">⬇ ติดตั้งแอป</button>
     <button class="btn ghost small hidden" id="loginBtn" onclick="openLogin()">🔑 เข้าสู่ระบบ</button>
     <button class="btn ghost small hidden" id="logoutBtn" onclick="doLogout()">🚪 ออกจากระบบ</button>
+    <button class="btn ghost small hidden" id="previewBtn" onclick="togglePreviewResearcher()"
+            title="ดูว่านักวิจัยที่ไม่เกี่ยวข้องกับโครงการเห็นหน้าจออย่างไร — ไม่กระทบข้อมูลหรือสิทธิ์จริง">👁 ดูแบบนักวิจัย</button>
     <button class="btn ghost small" id="roleBtn" onclick="toggleRole()">🔐 เข้าสู่โหมดแอดมิน</button>
   </div>
 </header>
@@ -1347,7 +1349,7 @@
 'use strict';
 
 /* ==================== ค่าคงที่ / ข้อมูลอ้างอิง ==================== */
-const APP_VERSION = '1.8.3 (6 พ.ย. 2569)';
+const APP_VERSION = '1.8.4 (9 พ.ย. 2569)';
 const STORE_KEY = 'lascAnimalReportData_v1';
 const ROLE_KEY  = 'lascAnimalReportRole';
 const PIN_KEY   = 'lascAnimalReportAdminPin';
@@ -1476,10 +1478,24 @@ function myPiKey() {
   }
   return { email: lcTrim(p.email), name: normName(p.name) };   /* ไม่ระบุบทบาท = ถือว่าเป็น PI ของตัวเอง */
 }
+/* โหมดพรีวิว: เจ้าหน้าที่กดดูว่านักวิจัยที่ไม่เกี่ยวข้องเห็นหน้าจออย่างไร
+   เป็นการแสดงผลล้วน ๆ ไม่เปลี่ยนสิทธิ์จริงและไม่แตะข้อมูลใด ๆ */
+let previewAsResearcher = false;
+function togglePreviewResearcher() {
+  previewAsResearcher = !previewAsResearcher;
+  if (!previewAsResearcher) setCloudBar('');   /* ล้างแถบพรีวิวก่อน เผื่อสถานะปกติไม่ได้เขียนทับ */
+  applyRole();
+  refreshProjectViews();
+  renderMemberBar();
+  toast(previewAsResearcher
+    ? 'กำลังดูแบบนักวิจัยที่ไม่เกี่ยวข้องกับโครงการ — กดปุ่มเดิมอีกครั้งเพื่อกลับมุมมองเจ้าหน้าที่'
+    : 'กลับสู่มุมมองเจ้าหน้าที่แล้ว');
+}
 /* เจ้าหน้าที่/โหมดแอดมินในเครื่อง — เห็นทะเบียนโครงการได้ทั้งหมด */
-function projectsUnlocked() { return isStaff || (isAdmin && !cloudUser); }
+function projectsUnlocked() { return !previewAsResearcher && (isStaff || (isAdmin && !cloudUser)); }
 function canSeeProjectDetail(p) {
   if (!p) return false;
+  if (previewAsResearcher) return false;   /* จำลองเป็นผู้ที่ไม่เกี่ยวข้องกับทุกโครงการ */
   if (projectsUnlocked()) return true;
   if (!cloudUser || !myProfile) return false;
   const key = myPiKey();
@@ -1558,10 +1574,18 @@ function toggleRole() {
   toast('เข้าสู่โหมดแอดมินแล้ว');
 }
 function applyRole() {
-  document.getElementById('roleChip').textContent = isAdmin
-    ? (isStaff ? '🛡️ เจ้าหน้าที่ศูนย์ฯ (ยืนยันจากคลาวด์)' : '🛡️ โหมดแอดมิน (เจ้าหน้าที่)')
-    : '👩‍🔬 โหมดนักวิจัย';
+  document.getElementById('roleChip').textContent = previewAsResearcher
+    ? '👁 กำลังดูแบบนักวิจัย (พรีวิว)'
+    : (isAdmin
+        ? (isStaff ? '🛡️ เจ้าหน้าที่ศูนย์ฯ (ยืนยันจากคลาวด์)' : '🛡️ โหมดแอดมิน (เจ้าหน้าที่)')
+        : '👩‍🔬 โหมดนักวิจัย');
   document.getElementById('roleBtn').textContent = isAdmin ? '🚪 ออกจากโหมดแอดมิน' : '🔐 เข้าสู่โหมดแอดมิน';
+  /* ปุ่มพรีวิว — มีให้เฉพาะเจ้าหน้าที่/แอดมิน ไว้ตรวจว่านักวิจัยทั่วไปเห็นหน้าจออย่างไร */
+  const pv = document.getElementById('previewBtn');
+  if (pv) {
+    pv.classList.toggle('hidden', !(isStaff || isAdmin || previewAsResearcher));
+    pv.textContent = previewAsResearcher ? '🛡 กลับมุมมองเจ้าหน้าที่' : '👁 ดูแบบนักวิจัย';
+  }
   /* ทะเบียนโครงการ = ข้อมูลของศูนย์ฯ ทั้งหมด → เปิดให้เฉพาะเจ้าหน้าที่ที่ยืนยันจากคลาวด์
      (หรือโหมดแอดมินในเครื่องตอนยังไม่ได้เข้าสู่ระบบ สำหรับใช้งานออฟไลน์) */
   const projOpen = projectsUnlocked();
@@ -3917,7 +3941,14 @@ async function doLogout() {
 /* ---------- สถานะบัญชี (แถบด้านบน) ---------- */
 function renderMemberBar() {
   const who = cloudUser ? esc(cloudUser.email || '') : '';
-  if (!fb || location.protocol === 'file:') return;
+  if (previewAsResearcher) {
+    setCloudBar(`👁 <b>โหมดพรีวิว — กำลังดูแบบนักวิจัยที่ไม่เกี่ยวข้องกับโครงการ</b>
+      รายละเอียดโครงการและทะเบียนโครงการจะถูกซ่อนเหมือนที่นักวิจัยทั่วไปเห็น
+      · เป็นการแสดงผลเท่านั้น ไม่กระทบข้อมูลหรือสิทธิ์จริง
+      · <a href="#" onclick="togglePreviewResearcher();return false"><b>กลับมุมมองเจ้าหน้าที่</b></a>`);
+    return;
+  }
+  if (!fb || location.protocol === 'file:') return;   /* เปิดจากไฟล์ในเครื่อง = ไม่มีคลาวด์ให้รายงานสถานะ */
   if (!cloudUser) {
     setCloudChip('', '☁ ยังไม่ได้เข้าสู่ระบบ (เก็บข้อมูลในเครื่อง)');
     setCloudBar('☁ ยังไม่ได้เข้าสู่ระบบ — ข้อมูลเก็บอยู่ในเครื่องนี้เท่านั้น ' +

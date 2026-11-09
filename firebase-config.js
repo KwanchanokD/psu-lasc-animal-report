@@ -43,4 +43,4 @@ window.LASC_CLOUD_ROOT = 'animalReport';
 
    ปล่อยว่างไว้ได้ ระบบทำงานปกติทุกอย่าง เพียงแต่ยังไม่มีเกราะชั้นนี้
    ─────────────────────────────────────────────────────────────────────── */
-window.LASC_APPCHECK_KEY = '';
+window.LASC_APPCHECK_KEY = '6LcvZRcuAAAAAOieaWcxAvjUeK9BD3kIZypvzZXL';
